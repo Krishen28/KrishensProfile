@@ -9,7 +9,8 @@
   <!--
     Required image files (place in repo root or update paths):
       - profile.jpg           (your profile photo)
-      - schedule.png          (screenshot or exported schedule image)
+      - schedule.png          (scre<img width="857" height="443" alt="Screenshot 2025-09-26 at 9 39 45 AM" src="https://github.com/user-attachments/assets/d841501e-8c5f-43cb-bd5a-e9c0c370d40c" />
+enshot or exported schedule image)
       - dexter-logo.png       (Dexter Southfield logo used as blurred background)
       - real-madrid.png       (Real Madrid crest)
       - ronaldo.jpg           (Cristiano Ronaldo photo)
