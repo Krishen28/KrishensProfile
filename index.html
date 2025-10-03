@@ -1,477 +1,574 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Your Personal Profile</title>
-  <meta name="description" content="Personal profile with schedule, soccer, and countdown" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>My Profile — All-in-one (SVG generated images & game)</title>
+<style>
+  :root{
+    --card-bg: rgba(0,0,0,0.55);
+    --accent: #1e90ff;
+    --muted: rgba(255,255,255,0.8);
+    --maxw: 1100px;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#fff;background:#072b2b;}
+  /* background layer (SVG) */
+  .bg {
+    position: fixed; inset:0; z-index:0; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    filter: blur(6px) saturate(110%); opacity:0.18;
+  }
 
-  <!--
-    Required image files (place in repo root or update paths):
-      - profile.jpg           (your profile photo)
-      - schedule.png          (screenshot or exported schedule image)
-      - dexter-logo.png       (Dexter Southfield logo used as blurred background)
-      - real-madrid.png       (Real Madrid crest)
-      - ronaldo.jpg           (Cristiano Ronaldo photo)
-      - kaka.jpg              (Kaká photo)
-      - celtics.png           (Celtics logo)
-      - redsox.png            (Red Sox logo)
-    Replace filenames or paths below if you prefer a different folder structure.
-  -->
+  .container{
+    position:relative;
+    z-index:2;
+    max-width:var(--maxw);
+    margin:32px auto;
+    padding:20px;
+    box-sizing:border-box;
+  }
 
-  <style>
-    :root{
-      --accent: #0b72ff;
-      --glass: rgba(255,255,255,0.85);
-      --muted: #586069;
-      --card-radius: 12px;
-      --max-width: 1100px;
-      --page-padding: 20px;
-    }
-    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:30px;
-      background: linear-gradient(180deg,#f6fbff 0%, #eef6ff 100%);
-      color:#0b1a2b;
-    }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+    border-radius:14px;
+    padding:18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+    backdrop-filter: blur(3px);
+  }
 
-    .page {
-      position:relative;
-      width:100%;
-      max-width:var(--max-width);
-      min-height:640px;
-      border-radius:18px;
-      overflow:hidden;
-      box-shadow: 0 10px 40px rgba(10,20,40,0.12);
-      background:linear-gradient(180deg, rgba(255,255,255,0.7), rgba(250,250,255,0.9));
-      padding:var(--page-padding);
-      box-sizing:border-box;
-    }
+  header{
+    display:flex; gap:16px; align-items:center;
+  }
 
-    /* blurred background logo */
-    .bg-logo {
-      position:absolute;
-      inset:0;
-      z-index:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      pointer-events:none;
-      opacity:0.12;
-      filter: blur(10px) saturate(80%);
-    }
-    .bg-logo img{
-      max-width:65%;
-      transform: rotate(-3deg);
-      object-fit:contain;
-      mix-blend-mode: multiply;
-    }
+  .avatar{
+    width:96px;height:96px;border-radius:16px;border:3px solid rgba(255,255,255,0.12);
+    background:linear-gradient(135deg,#ffffff22,#ffffff08); display:flex; align-items:center; justify-content:center;
+  }
 
-    header {
-      position:relative;
-      z-index:2;
-      display:flex;
-      gap:18px;
-      align-items:center;
-      margin-bottom:18px;
-    }
+  h1{margin:0;font-size:22px}
+  .subtitle{margin:4px 0 0 0;color:var(--muted);font-size:14px}
 
-    /* Profile image top-left */
-    .profile {
-      flex:0 0 auto;
-      width:96px;
-      height:96px;
-      border-radius:14px;
-      overflow:hidden;
-      border:3px solid rgba(255,255,255,0.7);
-      box-shadow: 0 6px 16px rgba(10,20,40,0.12);
-      background: linear-gradient(135deg,#fff,#f4f8ff);
-    }
-    .profile img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
+  .layout{
+    display:grid; grid-template-columns: 1fr 340px; gap:18px; margin-top:14px;
+  }
 
-    .title {
-      display:flex;
-      flex-direction:column;
-    }
-    .title h1{
-      margin:0;
-      font-size:20px;
-      letter-spacing:-0.2px;
-    }
-    .title p{
-      margin:6px 0 0 0;
-      color:var(--muted);
-      font-size:14px;
-    }
+  .left section{ margin-bottom:14px; border-radius:10px; padding:12px; background:var(--card-bg);}
+  .right .panel{ border-radius:10px; padding:12px; background:var(--card-bg); margin-bottom:12px;}
 
-    .content {
-      position:relative;
-      z-index:2;
-      display:grid;
-      grid-template-columns: 1fr 360px;
-      gap:18px;
-      align-items:start;
-    }
+  /* schedule placeholder */
+  .schedule-svg { width:100%; height:auto; border-radius:8px; display:block; }
 
-    /* Left column (main) */
-    .main {
-      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
-      padding:16px;
-      border-radius:var(--card-radius);
-      min-height:420px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    .section {
-      margin-bottom:16px;
-    }
-    .section h2{
-      margin:0 0 10px 0;
-      font-size:16px;
-    }
-    .schedule-img {
-      width:100%;
-      border-radius:10px;
-      overflow:hidden;
-      border:1px solid rgba(10,20,40,0.04);
-      box-shadow: 0 6px 14px rgba(10,20,40,0.06);
-    }
-    .schedule-img img{
-      display:block;
-      width:100%;
-      height:auto;
-    }
+  /* logos & portraits */
+  .logos{ display:flex; gap:10px; align-items:center; justify-content:flex-start; margin-top:8px; flex-wrap:wrap;}
+  .logo{ width:64px; height:64px; display:flex; align-items:center; justify-content:center; border-radius:10px; background: rgba(255,255,255,0.03); }
 
-    /* Right column */
-    .sidebar {
-      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,250,255,0.95));
-      border-radius:var(--card-radius);
-      padding:14px;
-      box-shadow: 0 6px 18px rgba(10,20,40,0.06);
-    }
+  .portraits{ display:flex; gap:10px; align-items:center; justify-content:flex-start; flex-wrap:wrap;}
+  .portrait{ width:140px; height:100px; border-radius:8px; background: rgba(255,255,255,0.02); padding:8px; box-sizing:border-box; }
 
-    .countdown {
-      display:flex;
-      gap:8px;
-      align-items:center;
-      margin-bottom:12px;
-    }
-    .countdown .box{
-      background:var(--glass);
-      padding:10px 12px;
-      border-radius:10px;
-      text-align:center;
-      min-width:64px;
-    }
-    .countdown .box .num{font-weight:700;font-size:18px;}
-    .countdown .box .lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+  /* countdown */
+  .countdown{ display:flex; gap:8px; align-items:center; justify-content:center; margin-top:6px;}
+  .countdown .box{ background:rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; min-width:64px; text-align:center;}
+  .box .num{ font-weight:700; font-size:18px; color:#fff;}
+  .box .lbl{ font-size:12px; color:var(--muted);}
 
-    .after-school {
-      margin-top:8px;
-    }
-    .after-school ul{padding-left:18px;margin:6px 0 0 0;}
-    .after-school li{margin:8px 0;font-weight:600;}
+  footer{ margin-top:12px; color:var(--muted); font-size:13px; text-align:center; }
 
-    /* soccer gallery */
-    .soccer {
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-      margin-top:10px;
-    }
-    .soccer .crest{
-      width:72px;
-      height:72px;
-      border-radius:10px;
-      overflow:hidden;
-      background:white;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:1px solid rgba(10,20,40,0.04);
-    }
-    .soccer .photos{
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .soccer img{height:72px;border-radius:8px;object-fit:cover;box-shadow: 0 8px 18px rgba(10,20,40,0.08);}
+  /* Game styling */
+  .game-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #gameArea { width:820px; max-width:calc(100% - 40px); height:520px; background: linear-gradient(#3aa24a,#2f8d3a); border-radius:12px; position:relative; overflow:hidden; border:4px solid rgba(255,255,255,0.08);}
+  /* SVG elements inside positioned by JS */
+  .hud{ color:#fff; text-shadow: 0 2px 6px rgba(0,0,0,0.6); font-weight:700; }
 
-    .logos {
-      display:flex;
-      gap:10px;
-      margin-top:8px;
-      align-items:center;
-    }
-    .logos img{height:40px;opacity:0.95;}
-
-    footer{
-      margin-top:14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      color:var(--muted);
-      font-size:13px;
-    }
-
-    /* modal for big images */
-    .modal {
-      position:fixed;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      background: rgba(2,6,23,0.6);
-      z-index:9999;
-    }
-    .modal .imgwrap{
-      max-width:95%;
-      max-height:90%;
-      border-radius:12px;
-      overflow:hidden;
-      box-shadow: 0 20px 60px rgba(2,6,23,0.6);
-      background:#fff;
-    }
-    .modal img{
-      display:block;
-      width:100%;
-      height:auto;
-    }
-
-    /* small screens */
-    @media (max-width:920px){
-      .content { grid-template-columns: 1fr; }
-      .sidebar { order:2; }
-      .main { order:1; }
-      header{ gap:12px;}
-    }
-  </style>
+  /* responsive */
+  @media (max-width:980px){
+    .layout{ grid-template-columns: 1fr; }
+    .right{ order:2; }
+  }
+</style>
 </head>
 <body>
-  <div class="page" role="main" aria-labelledby="pagename">
-    <!-- blurred background logo (Dexter) -->
-    <div class="bg-logo" aria-hidden="true">
-      <img src="dexter-logo.png" alt="">
-    </div>
 
-    <header>
-      <div class="profile" title="Your photo">
-        <img src="profile.jpg" alt="Profile photo">
-      </div>
-      <div class="title">
-        <h1 id="pagename">Your Name</h1>
-        <p>Student • Soccer player • Real Madrid fan</p>
-        <div style="margin-top:8px;">
-          <small style="color:var(--muted)">Location: Dexter Southfield (edit in HTML)</small>
-        </div>
-      </div>
+  <!-- background generated SVG (Dexter Southfield style wordmark & abstract shapes) -->
+  <div class="bg" aria-hidden="true">
+    <svg width="1600" height="900" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#0b5" stop-opacity="0.9"/><stop offset="1" stop-color="#03a" stop-opacity="0.9"/></linearGradient>
+        <filter id="f1"><feGaussianBlur stdDeviation="20" /></filter>
+      </defs>
+      <rect width="1600" height="900" fill="url(#g1)" opacity="0.75" filter="url(#f1)"/>
+      <g transform="translate(300,200)" fill="#fff" opacity="0.06">
+        <text x="0" y="0" font-size="160" font-weight="800" font-family="Arial">DEXTER</text>
+        <text x="0" y="140" font-size="64" font-weight="700" font-family="Arial">SOUTHFIELD</text>
+      </g>
+    </svg>
+  </div>
 
-      <!-- spacer -->
-      <div style="flex:1"></div>
-
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-        <div style="background:var(--glass);padding:8px 10px;border-radius:10px;font-weight:700;">Grade: 9</div>
-        <div style="font-size:12px;color:var(--muted);">Updated: <span id="updatedAt"></span></div>
-      </div>
-    </header>
-
-    <div class="content">
-      <section class="main" aria-label="Main content">
-        <div class="section" aria-hidden="false">
-          <h2>Schedule</h2>
-          <div class="schedule-img" role="img" aria-label="School schedule">
-            <!-- Replace schedule.png with the screenshot image you uploaded -->
-            <img id="scheduleImg" src="schedule.png" alt="School schedule - replace with your Blackbaud screenshot">
-          </div>
-          <p style="margin-top:8px;color:var(--muted);font-size:13px;">
-            Tip: Replace the schedule image above (schedule.png) with an updated screenshot exported from your Blackbaud account or recreate it in HTML.
-          </p>
+  <div class="container">
+    <div class="card" role="main" aria-labelledby="pagetitle">
+      <header>
+        <div class="avatar" aria-hidden="false" title="Profile avatar">
+          <!-- generated avatar SVG -->
+          <svg width="84" height="84" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Avatar">
+            <defs>
+              <linearGradient id="av" x1="0" x2="1"><stop offset="0" stop-color="#ffd47a"/><stop offset="1" stop-color="#ffaf6b"/></linearGradient>
+            </defs>
+            <rect rx="20" width="120" height="120" fill="url(#av)"/>
+            <!-- head -->
+            <circle cx="60" cy="46" r="20" fill="#fff6ea"/>
+            <!-- hair -->
+            <path d="M40 38 q20 -24 40 0 v6 q-8 -14 -40 -6z" fill="#2b2b2b"/>
+            <!-- body -->
+            <rect x="30" y="70" rx="10" width="60" height="36" fill="#ffffff22"/>
+          </svg>
         </div>
 
-        <div class="section" aria-label="Soccer section">
-          <h2>Soccer & Favorites</h2>
-          <div class="soccer">
-            <div class="crest" title="Real Madrid">
-              <img src="real-madrid.png" alt="Real Madrid crest" style="width:64px;height:64px;">
+        <div style="flex:1;text-align:left">
+          <h1 id="pagetitle">Your Name</h1>
+          <div class="subtitle">Student • Soccer player • Real Madrid fan — Dexter Southfield</div>
+        </div>
+
+        <div style="text-align:right">
+          <div style="font-weight:700">Grade 9</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Updated: <span id="updatedAt"></span></div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <!-- LEFT column -->
+        <div class="left">
+          <section aria-labelledby="scheduleTitle">
+            <h3 id="scheduleTitle" style="margin-top:0">School Schedule</h3>
+            <!-- schedule drawn as SVG placeholder (mimics a screenshot card) -->
+            <svg class="schedule-svg" viewBox="0 0 1200 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schedule screenshot placeholder">
+              <defs>
+                <linearGradient id="schG" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.06"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.02"/></linearGradient>
+              </defs>
+              <rect width="1200" height="540" rx="14" fill="url(#schG)"/>
+              <text x="30" y="48" fill="#fff" font-size="28" font-weight="700">Blackbaud — My Schedule</text>
+
+              <!-- mock grid -->
+              <g stroke="#ffffff22" stroke-width="1" transform="translate(30,80)">
+                <rect width="1140" height="420" rx="8" fill="#00000022"/>
+                <!-- columns -->
+                <g fill="#fff">
+                  <text x="20" y="36" font-size="20" fill="#fff7">Period</text>
+                  <text x="140" y="36" font-size="20" fill="#fff7">Time</text>
+                  <text x="360" y="36" font-size="20" fill="#fff7">Course</text>
+                  <text x="760" y="36" font-size="20" fill="#fff7">Teacher</text>
+                </g>
+                <!-- rows example -->
+                <g fill="#fff8" font-size="18" opacity="0.95">
+                  <text x="20" y="90">1</text><text x="140" y="90">8:00 - 8:45</text><text x="360" y="90">Math</text><text x="760" y="90">Ms. Park</text>
+                  <text x="20" y="140">2</text><text x="140" y="140">8:50 - 9:35</text><text x="360" y="140">English</text><text x="760" y="140">Mr. Lee</text>
+                  <text x="20" y="190">3</text><text x="140" y="190">9:40 - 10:25</text><text x="360" y="190">History</text><text x="760" y="190">Ms. Gomez</text>
+                  <text x="20" y="240">4</text><text x="140" y="240">10:30 - 11:15</text><text x="360" y="240">Science</text><text x="760" y="240">Dr. Chen</text>
+                  <text x="20" y="290">5</text><text x="140" y="290">11:20 - 12:05</text><text x="360" y="290">PE</text><text x="760" y="290">Coach Kim</text>
+                </g>
+              </g>
+            </svg>
+            <div style="margin-top:8px;color:var(--muted);font-size:13px">Tip: you can later replace this SVG block with your actual Blackbaud screenshot if you want.</div>
+          </section>
+
+          <section aria-labelledby="socTitle">
+            <h3 id="socTitle" style="margin:0 0 8px 0">Soccer & Favorites</h3>
+            <div class="logos" aria-hidden="false">
+              <!-- Celtics (shamrock) -->
+              <div class="logo" title="Celtics">
+                <svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Celtics icon">
+                  <circle cx="32" cy="32" r="30" fill="#0a7a3a"/>
+                  <g transform="translate(16,12)" fill="#fff">
+                    <path d="M16 4c6 0 10 5 10 8s-4 6-10 12c-6-6-10-9-10-12s4-8 10-8z"/>
+                    <path d="M16 28c-4-4-8-6-12-6s-6 2-6 4 2 6 6 8 8 0 12-6z"/>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Red Sox (socks) -->
+              <div class="logo" title="Red Sox">
+                <svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="64" height="64" rx="8" fill="#b71c1c"/>
+                  <g fill="#fff" transform="translate(10,10)">
+                    <rect x="4" y="8" width="10" height="20" rx="3"/>
+                    <rect x="20" y="8" width="10" height="20" rx="3"/>
+                    <circle cx="9" cy="6" r="4"/>
+                    <circle cx="25" cy="6" r="4"/>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Real Madrid (crown/circle) -->
+              <div class="logo" title="Real Madrid">
+                <svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="32" cy="32" r="30" fill="#e8dd6f"/>
+                  <path d="M12 20 L22 12 L32 22 L42 12 L52 20 L44 24 L32 16 L20 24 Z" fill="#b21f1f" opacity="0.9"/>
+                  <text x="32" y="44" font-size="14" text-anchor="middle" fill="#1b1b1b" font-weight="700">RM</text>
+                </svg>
+              </div>
             </div>
 
-            <div class="photos" style="flex:1;justify-content:flex-end;">
-              <img src="ronaldo.jpg" alt="Cristiano Ronaldo" style="width:120px;height:72px;object-fit:cover;">
-              <img src="kaka.jpg" alt="Kaká" style="width:120px;height:72px;object-fit:cover;">
+            <div style="margin-top:12px">
+              <div style="font-weight:700;margin-bottom:6px">Soccer Legends</div>
+              <div class="portraits">
+                <!-- Ronaldo stylized -->
+                <div class="portrait" title="Cristiano Ronaldo (stylized)">
+                  <svg width="140" height="100" viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="140" height="100" rx="8" fill="#ffffff12"/>
+                    <circle cx="42" cy="38" r="20" fill="#ffd" />
+                    <path d="M28 34 q14 -18 28 0" fill="#222"/>
+                    <text x="80" y="66" font-size="18" fill="#fff">Ronaldo</text>
+                  </svg>
+                </div>
+
+                <!-- Kaka stylized -->
+                <div class="portrait" title="Kaká (stylized)">
+                  <svg width="140" height="100" viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="140" height="100" rx="8" fill="#ffffff12"/>
+                    <circle cx="42" cy="38" r="20" fill="#ffe8c8" />
+                    <path d="M28 32 q14 -12 28 0" fill="#7b3f00"/>
+                    <text x="80" y="66" font-size="18" fill="#fff">Kaká</text>
+                  </svg>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="logos" aria-hidden="false">
-            <img src="celtics.png" alt="Celtics logo">
-            <img src="redsox.png" alt="Red Sox logo">
-          </div>
-        </div>
-      </section>
-
-      <aside class="sidebar" aria-label="Sidebar">
-        <h2>Countdown to end of school</h2>
-        <div class="countdown" id="countdown" aria-live="polite" role="timer">
-          <div class="box">
-            <div class="num" id="days">--</div>
-            <div class="lbl">Days</div>
-          </div>
-          <div class="box">
-            <div class="num" id="hours">--</div>
-            <div class="lbl">Hours</div>
-          </div>
-          <div class="box">
-            <div class="num" id="mins">--</div>
-            <div class="lbl">Mins</div>
-          </div>
-          <div class="box">
-            <div class="num" id="secs">--</div>
-            <div class="lbl">Secs</div>
-          </div>
-        </div>
-
-        <div style="margin-top:12px;">
-          <label style="font-weight:700;display:block;margin-bottom:6px;">After-school schedule</label>
-          <div class="after-school" role="list">
-            <ul>
-              <li>Mon — Soccer Practice — 4:00 PM (MS Field)</li>
-              <li>Wed — Soccer Practice — 4:00 PM (MS Field)</li>
-              <li>Fri — Practice — 4:45 PM (MS Field)</li>
+          <section aria-labelledby="afterTitle">
+            <h3 id="afterTitle" style="margin:0 0 8px 0">After-school Schedule</h3>
+            <ul style="list-style:none;padding:0;margin:0;color:var(--muted);font-weight:700">
+              <li>Mon — Soccer Practice — 4:00 PM</li>
+              <li>Wed — Soccer Practice — 4:00 PM</li>
+              <li>Fri — Soccer Practice — 4:45 PM</li>
             </ul>
+          </section>
+        </div>
+
+        <!-- RIGHT column -->
+        <aside class="right">
+          <div class="panel" aria-labelledby="countTitle">
+            <h4 id="countTitle" style="margin:0 0 8px 0">Countdown to end of school</h4>
+            <div class="countdown" aria-live="polite">
+              <div class="box"><div class="num" id="days">--</div><div class="lbl">Days</div></div>
+              <div class="box"><div class="num" id="hours">--</div><div class="lbl">Hours</div></div>
+              <div class="box"><div class="num" id="mins">--</div><div class="lbl">Mins</div></div>
+              <div class="box"><div class="num" id="secs">--</div><div class="lbl">Secs</div></div>
+            </div>
+            <div style="margin-top:10px;color:var(--muted);font-size:13px">School end date: <strong id="schoolDateText">June 10, 2026</strong></div>
+          </div>
+
+          <div class="panel" aria-labelledby="linksTitle">
+            <h4 id="linksTitle" style="margin:0 0 8px 0">Quick links</h4>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="#" style="color:var(--accent);text-decoration:none">Open real Blackbaud (login required)</a>
+              <a href="#" style="color:var(--accent);text-decoration:none">Real Madrid official</a>
+              <a href="#" style="color:var(--accent);text-decoration:none">Dexter Southfield</a>
+            </div>
+          </div>
+
+          <div class="panel" aria-hidden="false">
+            <h4 style="margin:0 0 8px 0">Fun</h4>
+            <!-- sour patch kid stylized -->
+            <svg viewBox="0 0 160 80" width="100%" height="80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="sour patch kid">
+              <rect rx="10" width="160" height="80" fill="#ffffff06"/>
+              <g transform="translate(10,10)">
+                <ellipse cx="20" cy="24" rx="16" ry="18" fill="#ff6b6b"/>
+                <ellipse cx="50" cy="24" rx="16" ry="18" fill="#ffd166"/>
+                <ellipse cx="80" cy="24" rx="16" ry="18" fill="#6be3a9"/>
+                <text x="110" y="42" fill="#fff" font-size="12" font-weight="700">Sour Patch Fan</text>
+              </g>
+            </svg>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Game Section (bottom) -->
+      <div style="margin-top:18px" class="game-wrap">
+        <div style="width:100%;max-width:var(--maxw);" class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div>
+              <h3 style="margin:0">⚽ Soccer Shooting Game</h3>
+              <div style="color:var(--muted);font-size:13px">Press <strong>Spacebar</strong> to shoot. Score increases when you get the ball past the keeper into the goal.</div>
+            </div>
+            <div class="hud">
+              <div>Score: <span id="scoreVal">0</span></div>
+            </div>
+          </div>
+
+          <!-- Game area (SVG-based) -->
+          <div id="gameArea" aria-label="Soccer game area" role="application" tabindex="0" style="margin-top:12px">
+            <svg id="svgField" viewBox="0 0 820 520" preserveAspectRatio="xMidYMid meet" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="img">
+              <defs>
+                <!-- ball pattern -->
+                <g id="ballShape">
+                  <circle cx="0" cy="0" r="20" fill="#fff" stroke="#000" stroke-width="2"></circle>
+                  <path d="M -8 -12 l6 4 l6 -4 l-6 -4 z" fill="#222" transform="translate(0,0)"/>
+                </g>
+
+                <!-- simple net pattern -->
+                <pattern id="net" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M0 0 L10 10 M10 0 L0 10" stroke="#ffffff33" stroke-width="1"/>
+                </pattern>
+
+                <!-- keeper icon -->
+                <g id="keeperIcon">
+                  <rect x="-20" y="-40" width="40" height="60" rx="6" fill="#1f6fb3"/>
+                  <circle cx="0" cy="-54" r="12" fill="#ffdfc4"/>
+                </g>
+
+                <!-- goal icon -->
+                <g id="goalIcon">
+                  <rect x="0" y="0" width="100" height="10" fill="#fff"/>
+                  <rect x="0" y="10" width="10" height="180" fill="#fff"/>
+                  <rect x="90" y="10" width="10" height="180" fill="#fff"/>
+                  <rect x="0" y="190" width="100" height="10" fill="#fff"/>
+                  <rect x="10" y="10" width="80" height="180" fill="url(#net)" />
+                </g>
+              </defs>
+
+              <!-- field markings -->
+              <rect x="0" y="0" width="820" height="520" rx="12" fill="url(#fieldGrad)"/>
+              <defs>
+                <linearGradient id="fieldGrad" x1="0" x2="0"><stop offset="0" stop-color="#3fb24a"/><stop offset="1" stop-color="#2f8d3a"/></linearGradient>
+              </defs>
+
+              <!-- left side (ball start) -->
+              <g id="ballGroup" transform="translate(200,440)" style="cursor:pointer">
+                <use href="#ballShape"></use>
+              </g>
+
+              <!-- goal placed on right -->
+              <g id="goalGroup" transform="translate(700,160) scale(0.9)">
+                <use href="#goalIcon"></use>
+              </g>
+
+              <!-- keeper (we'll move this group up/down) -->
+              <g id="keeperGroup" transform="translate(640,240)">
+                <use href="#keeperIcon"></use>
+              </g>
+
+              <!-- center circle -->
+              <circle cx="410" cy="260" r="72" fill="none" stroke="#ffffff55" stroke-width="2"/>
+
+              <!-- decorative stands (small) -->
+              <g transform="translate(20,20)" opacity="0.08">
+                <rect x="0" y="0" width="760" height="30" rx="6" fill="#fff"/>
+              </g>
+            </svg>
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px">
+            <div id="msg" style="color:#ffd; font-weight:700"></div>
+            <button id="resetBtn" style="padding:8px 12px;border-radius:8px;border:0;background:#ffffff10;color:#fff;cursor:pointer">Reset Score</button>
           </div>
         </div>
-
-        <div style="margin-top:12px;">
-          <button id="downloadScheduleBtn" style="background:var(--accent);color:white;border:0;padding:10px 12px;border-radius:10px;font-weight:700;cursor:pointer;">
-            Download Schedule Image
-          </button>
-        </div>
-
-        <div style="margin-top:14px;">
-          <h3 style="margin:0 0 8px 0;font-size:14px;">Quick links</h3>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <a href="#" onclick="openImage('schedule.png');return false;">Open full schedule</a>
-            <a href="https://www.realmadrid.com" target="_blank" rel="noopener">Real Madrid official</a>
-            <a href="https://www.dextersouthfield.org" target="_blank" rel="noopener">Dexter Southfield</a>
-          </div>
-        </div>
-      </aside>
-    </div>
-
-    <footer>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <small>© <span id="currentYear"></span> Your Name</small>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <img src="celtics.png" alt="Celtics" style="height:28px;">
-        <img src="redsox.png" alt="Red Sox" style="height:28px;">
-      </div>
-    </footer>
-  </div>
 
-  <!-- modal -->
-  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="imgwrap" id="modalWrap">
-      <img id="modalImg" src="" alt="Expanded image">
+      <footer>
+        © <span id="year"></span> Your Name — built with SVG images (cartoon)
+      </footer>
     </div>
   </div>
 
-  <script>
-    /* ===========================
-       Configuration - edit these
-       =========================== */
-    // set the school end date here (ISO format). Change to your actual last day of school.
-    const schoolEnd = new Date('2026-06-06T23:59:59'); // <-- change this to your school's last day/time
+<script>
+  // -------------------------
+  // Config
+  // -------------------------
+  const schoolEndISO = '2026-06-10T15:00:00'; // change if needed
+  const schoolEnd = new Date(schoolEndISO);
 
-    // filenames for assets (ensure they exist in your repo)
-    const ASSETS = {
-      schedule: 'schedule.png' // replace with your screenshot filename if different
-    };
+  // Display updated at & year
+  document.getElementById('updatedAt').textContent = new Date().toLocaleDateString();
+  document.getElementById('year').textContent = new Date().getFullYear();
+  document.getElementById('schoolDateText').textContent = schoolEnd.toLocaleDateString();
 
-    // set this to your display values
-    document.getElementById('currentYear').textContent = new Date().getFullYear();
-    document.getElementById('updatedAt').textContent = new Date().toLocaleDateString();
+  // -------------------------
+  // Countdown
+  // -------------------------
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function updateCountdown(){
+    const now = new Date();
+    let diff = schoolEnd - now;
+    if(diff <= 0){
+      document.getElementById('days').textContent='0';
+      document.getElementById('hours').textContent='00';
+      document.getElementById('mins').textContent='00';
+      document.getElementById('secs').textContent='00';
+      return;
+    }
+    const days = Math.floor(diff / (1000*60*60*24));
+    diff -= days*(1000*60*60*24);
+    const hours = Math.floor(diff/(1000*60*60)); diff -= hours*(1000*60*60);
+    const mins = Math.floor(diff/(1000*60)); diff -= mins*(1000*60);
+    const secs = Math.floor(diff/1000);
+    document.getElementById('days').textContent = days;
+    document.getElementById('hours').textContent = pad(hours);
+    document.getElementById('mins').textContent = pad(mins);
+    document.getElementById('secs').textContent = pad(secs);
+  }
+  updateCountdown();
+  setInterval(updateCountdown,1000);
 
-    /* Countdown logic */
-    function pad(n){ return String(n).padStart(2,'0'); }
-    function updateCountdown(){
-      const now = new Date();
-      let diff = schoolEnd - now;
-      if(diff <= 0){
-        document.getElementById('days').textContent = '0';
-        document.getElementById('hours').textContent = '00';
-        document.getElementById('mins').textContent = '00';
-        document.getElementById('secs').textContent = '00';
-        return;
+  // -------------------------
+  // Soccer Game Logic (SVG elements)
+  // -------------------------
+  const svg = document.getElementById('svgField');
+  const ballGroup = document.getElementById('ballGroup');
+  const keeperGroup = document.getElementById('keeperGroup');
+  const goalGroup = document.getElementById('goalGroup');
+  const scoreEl = document.getElementById('scoreVal');
+  const msgEl = document.getElementById('msg');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let score = 0;
+  let shooting = false;
+  let keeperDir = 1; // 1 down, -1 up
+  let keeperY = 240;
+  let keeperSpeed = 0.6; // px per frame base
+
+  // Positions (in SVG coordinate space)
+  let ballPos = { x: 200, y: 440 };
+  let ballVel = { x: 0, y: 0 };
+
+  // helper: set transform
+  function setTransform(el, x, y){
+    el.setAttribute('transform', `translate(${x},${y})`);
+  }
+
+  // initialize
+  setTransform(ballGroup, ballPos.x, ballPos.y);
+  setTransform(keeperGroup, 640, keeperY);
+
+  // move keeper up/down automatically; speed increases with score
+  function keeperTick(){
+    // dynamic speed: base + score*0.08
+    const spd = keeperSpeed + Math.min(1.6, score * 0.08);
+    keeperY += keeperDir * spd;
+    // bounds inside field (approx)
+    if(keeperY < 160){ keeperY = 160; keeperDir = 1; }
+    if(keeperY > 320){ keeperY = 320; keeperDir = -1; }
+    setTransform(keeperGroup, 640, keeperY);
+  }
+
+  // basic collision detection using bounding boxes
+  function rectOf(el){
+    const bbox = el.getBBox();
+    // get transform translate
+    const tr = el.getAttribute('transform') || 'translate(0,0)';
+    const m = tr.match(/translate\((-?\d+\.?\d*),\s*(-?\d+\.?\d*)\)/);
+    const tx = m ? parseFloat(m[1]) : 0;
+    const ty = m ? parseFloat(m[2]) : 0;
+    return { x: bbox.x + tx, y: bbox.y + ty, w: bbox.width, h: bbox.height };
+  }
+
+  // game loop
+  let lastTime = performance.now();
+  function loop(now){
+    const dt = now - lastTime;
+    lastTime = now;
+
+    // keeper movement continuous
+    keeperTick();
+
+    // ball physics (if shooting)
+    if(shooting){
+      // move ball by velocity (pixels per frame tuned)
+      ballPos.x += ballVel.x * (dt/16);
+      ballPos.y += ballVel.y * (dt/16);
+      // gravity arc effect
+      ballVel.y += 0.35 * (dt/16);
+
+      // update visuals
+      setTransform(ballGroup, ballPos.x, ballPos.y);
+
+      // collision checks
+      const ballRect = rectOf(ballGroup);
+      const keeperRect = rectOf(keeperGroup);
+      const goalRect = rectOf(goalGroup);
+
+      // simplified goal detection: ball's right edge passes goal's left inside vertical bounds
+      if(ballRect.x + ballRect.w > goalRect.x + 10 &&
+         ballRect.y + ballRect.h > goalRect.y + 20 &&
+         ballRect.y < goalRect.y + goalRect.h - 20){
+        // ensure not blocked first (keeper overlap)
+        const blocked = !(ballRect.x + ballRect.w < keeperRect.x ||
+                          ballRect.x > keeperRect.x + keeperRect.w ||
+                          ballRect.y + ballRect.h < keeperRect.y ||
+                          ballRect.y > keeperRect.y + keeperRect.h);
+
+        if(!blocked){
+          // GOAL
+          score++;
+          scoreEl.textContent = score;
+          msgEl.textContent = '🎉 GOAL!';
+          endShot(true);
+        } else {
+          // blocked
+          msgEl.textContent = '😢 Blocked by keeper!';
+          endShot(false);
+        }
       }
-      const days = Math.floor(diff / (1000*60*60*24));
-      diff -= days * (1000*60*60*24);
-      const hours = Math.floor(diff / (1000*60*60));
-      diff -= hours * (1000*60*60);
-      const mins = Math.floor(diff / (1000*60));
-      diff -= mins * (1000*60);
-      const secs = Math.floor(diff / 1000);
 
-      document.getElementById('days').textContent = days;
-      document.getElementById('hours').textContent = pad(hours);
-      document.getElementById('mins').textContent = pad(mins);
-      document.getElementById('secs').textContent = pad(secs);
-    }
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-
-    /* Modal / download logic */
-    const modal = document.getElementById('modal');
-    const modalImg = document.getElementById('modalImg');
-
-    function openImage(src){
-      modalImg.src = src;
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden','false');
-    }
-    function closeModal(){
-      modal.style.display = 'none';
-      modal.setAttribute('aria-hidden','true');
-      modalImg.src = '';
+      // miss condition: ball goes off right or top/bottom
+      if(ballPos.x > 900 || ballPos.y > 600 || ballPos.y < -200){
+        msgEl.textContent = '❌ Missed!';
+        endShot(false);
+      }
     }
 
-    modal.addEventListener('click', (e) => {
-      if(e.target === modal || e.target === modalImg) closeModal();
-    });
+    requestAnimationFrame(loop);
+  }
 
-    document.addEventListener('keydown', (e) => {
-      if(e.key === 'Escape') closeModal();
-    });
+  // end shot: reset ball after short delay and allow next shot; if scored, speed up keeper a bit
+  function endShot(scored){
+    shooting = false;
+    // if scored, slightly increase keeper speed (makes harder)
+    if(scored){
+      keeperSpeed += 0.12;
+    }
+    setTimeout(()=> {
+      // reset ball to starting pos
+      ballPos = { x: 200, y: 440 };
+      ballVel = { x: 0, y: 0 };
+      setTransform(ballGroup, ballPos.x, ballPos.y);
+      // clear message after a bit
+      setTimeout(()=>{ msgEl.textContent = ''; }, 900);
+    }, 650);
+  }
 
-    document.getElementById('scheduleImg').addEventListener('click', function(){
-      openImage(ASSETS.schedule);
-    });
+  // initiate loop
+  requestAnimationFrame(loop);
 
-    document.getElementById('downloadScheduleBtn').addEventListener('click', function(){
-      // trigger browser download of the schedule image
-      const link = document.createElement('a');
-      link.href = ASSETS.schedule;
-      link.download = 'my-schedule.png';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    });
+  // shoot handler (spacebar)
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space' && !shooting){
+      shooting = true;
+      msgEl.textContent = '';
+      // compute a velocity that sends ball toward goal with an arc; vary by aim offset optionally
+      // simpler: fixed initial velocity to the right and slightly up
+      ballVel.x = 12 + Math.random()*2;        // horizontal speed
+      ballVel.y = -7.5 - Math.random()*2.5;    // upward component (negative)
+    }
+  });
 
-    // Make image open on double click on small devices
-    document.getElementById('scheduleImg').addEventListener('dblclick', function(){
-      openImage(ASSETS.schedule);
-    });
+  // allow clicking/tapping ball to shoot (mobile)
+  ballGroup.addEventListener('click', ()=>{
+    if(!shooting){
+      const evt = new KeyboardEvent('keydown',{code:'Space'});
+      window.dispatchEvent(evt);
+    }
+  });
 
-    // Accessibility: ensure profile alt text and labels updated if desired
-  </script>
+  // reset score
+  resetBtn.addEventListener('click', ()=>{
+    score = 0; scoreEl.textContent = score; keeperSpeed = 0.6; msgEl.textContent=''; 
+  });
+
+  // little accessibility focus
+  document.getElementById('gameArea').addEventListener('focus', ()=>{ msgEl.textContent = 'Press Spacebar to shoot'; setTimeout(()=>msgEl.textContent='',1000); });
+
+  // set initial transforms to be exact
+  setTransform(ballGroup, ballPos.x, ballPos.y);
+  setTransform(keeperGroup, 640, keeperY);
+
+</script>
 </body>
 </html>
-
