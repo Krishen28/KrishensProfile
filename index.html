@@ -2,20 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Fun School + Soccer Game</title>
+  <title>My Fun School + Games Website</title>
   <style>
     body {
       margin: 0;
       font-family: "Comic Sans MS", cursive, sans-serif;
       background: linear-gradient(135deg, #87cefa, #fefbd8);
-      text-align: center;
       color: #333;
+      text-align: center;
     }
     header {
       background: #ffcc00;
       padding: 20px;
-      font-size: 2em;
       border-bottom: 5px solid #333;
+    }
+    header img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-top: 10px;
     }
     section {
       margin: 30px auto;
@@ -82,18 +88,44 @@
   </style>
 </head>
 <body>
+  <!-- HEADER -->
   <header>
-    🎓 My Fun School Website + Soccer Game ⚽
+    <h1>🎓 My Fun School Website + Games ⚽</h1>
+    <img src="https://cdn.pixabay.com/photo/2017/01/31/17/44/banner-2026066_960_720.png" alt="Cartoon Banner" />
   </header>
 
+  <!-- ABOUT SECTION -->
+  <section>
+    <h2>👋 Welcome!</h2>
+    <p>
+      Hi! This is my personal website.  
+      Here you’ll find my school schedule, fun info about me, and games I’ve added for fun.  
+      Have a look around and enjoy!
+    </p>
+  </section>
+
+  <!-- SCHEDULE SECTION -->
   <section>
     <h2>📅 My Class Schedule</h2>
     <p>Here’s a snapshot of my weekly school schedule:</p>
     <img src="Screenshot 2025-09-26 at 9.39.45 AM.png" alt="School Schedule" class="schedule" />
   </section>
 
+  <!-- FUN FACTS SECTION -->
   <section>
-    <h2>⚽ Soccer Game (PC-Friendly)</h2>
+    <h2>🎉 Fun Facts About Me</h2>
+    <ul style="text-align: left; max-width: 600px; margin: auto; font-size: 1.1em;">
+      <li>I love playing soccer and video games.</li>
+      <li>My favorite subject is Science 🧪.</li>
+      <li>I enjoy coding websites (like this one!) ✨.</li>
+      <li>Cartoon art style is my favorite 🎨.</li>
+    </ul>
+  </section>
+
+  <!-- GAMES SECTION -->
+  <section>
+    <h2>🎮 Games Zone</h2>
+    <h3>⚽ Soccer Game</h3>
     <div id="gameArea">
       <div id="goal"></div>
       <div id="goalkeeper"></div>
