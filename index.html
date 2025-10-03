@@ -2,23 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Profile Website</title>
+  <title>My Personal Website</title>
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       color: white;
       text-align: center;
-      background: url("https://upload.wikimedia.org/wikipedia/en/1/17/Dexter_Southfield_School_logo.png") no-repeat center center fixed;
-      background-size: cover;
-      backdrop-filter: blur(6px);
+      background: linear-gradient(to bottom, #1a4d1a, #2d862d);
     }
 
     header {
       display: flex;
       align-items: center;
       padding: 20px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
     }
 
     header img {
@@ -41,31 +39,13 @@
       width: 80%;
     }
 
-    .logos img {
-      width: 90px;
-      margin: 15px;
+    section img {
+      max-width: 100%;
+      border-radius: 12px;
+      border: 3px solid white;
     }
 
-    #countdown {
-      font-size: 2em;
-      margin-top: 20px;
-      color: #ffcc00;
-    }
-
-    .decor {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      width: 120px;
-    }
-
-    .soccer-legends img {
-      width: 220px;
-      margin: 15px;
-      border-radius: 10px;
-    }
-
-    /* Soccer Game Styling */
+    /* Game Area */
     #gameArea {
       position: relative;
       width: 800px;
@@ -99,9 +79,9 @@
       position: absolute;
       top: 200px;
       right: 120px;
-      width: 60px;
-      height: 100px;
-      background: url("https://upload.wikimedia.org/wikipedia/commons/1/1e/Goalkeeper_cartoon.png") no-repeat center/contain;
+      width: 80px;
+      height: 120px;
+      background: url("https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Cartoon-soccer-goalie.png/240px-Cartoon-soccer-goalie.png") no-repeat center/contain;
     }
 
     #score {
@@ -117,49 +97,56 @@
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header>
     <img src="https://i.pravatar.cc/150?img=12" alt="My Picture">
-    <h1>Welcome to My Website</h1>
+    <h1>⚽ Welcome to My Website ⚽</h1>
   </header>
 
-  <!-- Schedule -->
+  <!-- Schedule Section -->
   <section>
-    <h2>My School Schedule</h2>
-    <img src="https://via.placeholder.com/800x400.png?text=My+School+Schedule" alt="My Schedule" style="width:100%; border-radius: 10px;">
+    <h2>📚 My School Schedule</h2>
+    <img src="Screenshot-2025-09-26.png" alt="My School Schedule">
+    <p>(This is my weekly schedule)</p>
   </section>
 
-  <!-- After school activities -->
+  <!-- After School -->
   <section>
-    <h2>After School Activities</h2>
-    <p>⚽ Soccer Practice - Monday & Wednesday at 4:00 PM</p>
-    <p>⚽ Soccer Practice - Friday at 4:45 PM</p>
-  </section>
-
-  <!-- Logos -->
-  <section class="logos">
-    <h2>My Favorite Teams</h2>
-    <img src="https://upload.wikimedia.org/wikipedia/en/8/8f/Boston_Celtics.svg" alt="Celtics Logo">
-    <img src="https://upload.wikimedia.org/wikipedia/en/6/6d/RedSoxPrimary_HangingSocks.svg" alt="Red Sox Logo">
-    <img src="https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg" alt="Real Madrid Logo">
-  </section>
-
-  <!-- Soccer Legends -->
-  <section class="soccer-legends">
-    <h2>Soccer Legends</h2>
-    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg" alt="Cristiano Ronaldo">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/1/15/Kaka_AC_Milan_2007.jpg" alt="Kaká">
+    <h2>🏃 After School Activities</h2>
+    <p>⚽ Soccer practice after school</p>
+    <p>📘 Homework and study time</p>
+    <p>🎮 Gaming & free time</p>
   </section>
 
   <!-- Countdown -->
   <section>
-    <h2>Countdown to Summer</h2>
-    <div id="countdown"></div>
+    <h2>⏳ Countdown Until School Ends</h2>
+    <p id="countdown"></p>
+  </section>
+
+  <!-- Sports Logos -->
+  <section>
+    <h2>🏀 My Favorite Teams</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/en/8/8f/Boston_Celtics.svg" alt="Celtics Logo" width="100">
+    <img src="https://upload.wikimedia.org/wikipedia/en/6/6d/RedSoxPrimary_HangingSocks.svg" alt="Red Sox Logo" width="100">
+    <img src="https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg" alt="Real Madrid Logo" width="100">
+  </section>
+
+  <!-- Ronaldo and Kaka -->
+  <section>
+    <h2>⭐ Ronaldo & Kaká</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg" alt="Ronaldo" width="200">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Kaka_AC_Milan_2007.jpg" alt="Kaká" width="200">
+  </section>
+
+  <!-- Sour Patch -->
+  <section>
+    <h2>🍬 Sour Patch Kid</h2>
+    <img src="https://upload.wikimedia.org/wikipedia/en/0/07/Sour_Patch_Kids.png" alt="Sour Patch" width="150">
   </section>
 
   <!-- Soccer Game -->
   <section>
-    <h2>⚽ Soccer Shooting Game ⚽</h2>
+    <h2>⚽ Soccer Shooting Game</h2>
     <div id="gameArea">
       <div id="goal"></div>
       <div id="goalkeeper"></div>
@@ -167,43 +154,44 @@
     </div>
     <div id="score">Score: 0</div>
     <div id="message"></div>
-    <p>Press <strong>Spacebar</strong> to shoot!</p>
+    <p>
+      Controls: <br>
+      <strong>Spacebar</strong> = Shoot <br>
+      <strong>⬆️ / ⬇️</strong> = Curve ball vertically
+    </p>
   </section>
 
-  <!-- Sour Patch Kid decoration -->
-  <img src="https://upload.wikimedia.org/wikipedia/en/d/d2/Sour_Patch_Kids_logo.png" alt="Sour Patch Kid" class="decor">
-
   <script>
-    // Countdown Timer
+    // Countdown timer (last day of school example: June 10, 2026)
     const endDate = new Date("June 10, 2026 15:00:00").getTime();
-    function updateCountdown() {
+    setInterval(function() {
       const now = new Date().getTime();
       const distance = endDate - now;
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      document.getElementById("countdown").innerHTML = days + " days left until school ends!";
-    }
-    setInterval(updateCountdown, 1000);
-    updateCountdown();
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      document.getElementById("countdown").innerHTML = days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+    }, 1000);
 
     // Soccer Game
     let ball = document.getElementById("ball");
     let goalkeeper = document.getElementById("goalkeeper");
     let scoreDisplay = document.getElementById("score");
     let message = document.getElementById("message");
-
     let score = 0;
     let shooting = false;
 
-    // Move goalkeeper up and down
+    // Move goalkeeper
     let direction = 2;
     function moveGoalkeeper() {
       let top = parseInt(window.getComputedStyle(goalkeeper).top);
-      if (top <= 150 || top >= 300) direction *= -1;
+      if (top <= 100 || top >= 300) direction *= -1;
       goalkeeper.style.top = top + direction + "px";
     }
     setInterval(moveGoalkeeper, 20);
 
-    // Shoot ball with spacebar
+    // Shoot ball
     document.addEventListener("keydown", function(e) {
       if (e.code === "Space" && !shooting) {
         shooting = true;
@@ -216,9 +204,13 @@
       let posX = parseInt(window.getComputedStyle(ball).left);
       let posY = parseInt(window.getComputedStyle(ball).top || "460");
 
+      let yVelocity = -5;
+      let xVelocity = 10;
+
       let interval = setInterval(() => {
-        posX += 10;  // move right
-        posY -= 5;   // move up
+        posX += xVelocity;
+        posY += yVelocity;
+
         ball.style.left = posX + "px";
         ball.style.top = posY + "px";
 
@@ -258,6 +250,17 @@
           message.innerHTML = "❌ Missed!";
         }
       }, 30);
+
+      // Arrow key control
+      document.addEventListener("keydown", function handleMove(e) {
+        if (!shooting) return;
+        if (e.code === "ArrowUp") {
+          posY -= 15;
+        }
+        if (e.code === "ArrowDown") {
+          posY += 15;
+        }
+      });
     }
 
     function resetBall() {
