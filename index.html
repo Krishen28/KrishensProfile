@@ -1,152 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>My Personal Website</title>
+  <meta charset="UTF-8" />
+  <title>Fun School + Soccer Game</title>
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      color: white;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      background: linear-gradient(135deg, #87cefa, #fefbd8);
       text-align: center;
-      background: linear-gradient(to bottom, #1a4d1a, #2d862d);
+      color: #333;
     }
-
     header {
-      display: flex;
-      align-items: center;
+      background: #ffcc00;
       padding: 20px;
-      background: rgba(0,0,0,0.7);
+      font-size: 2em;
+      border-bottom: 5px solid #333;
     }
-
-    header img {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 3px solid white;
-      margin-right: 20px;
-    }
-
-    h1 {
-      font-size: 2.5em;
-    }
-
     section {
-      background: rgba(0, 0, 0, 0.6);
-      margin: 20px auto;
+      margin: 30px auto;
       padding: 20px;
-      border-radius: 12px;
-      width: 80%;
+      max-width: 900px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    h2 {
+      color: #ff6600;
+    }
+    img.schedule {
+      width: 100%;
+      border-radius: 10px;
+      margin: 15px 0;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
     }
 
-    section img {
-      max-width: 100%;
-      border-radius: 12px;
-      border: 3px solid white;
-    }
-
-    /* Game Area */
+    /* Soccer Game Styles */
     #gameArea {
       position: relative;
       width: 800px;
-      height: 500px;
+      height: 400px;
       margin: 20px auto;
       border: 5px solid white;
-      background: #3a9d23 url("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Soccer_field_-_empty.svg/800px-Soccer_field_-_empty.svg.png") center/cover;
-      overflow: hidden;
+      background: #3a9d23;
       border-radius: 12px;
+      overflow: hidden;
     }
-
     #goal {
       position: absolute;
-      top: 150px;
+      top: 100px;
       right: 0;
-      width: 100px;
+      width: 120px;
       height: 200px;
       background: url("https://upload.wikimedia.org/wikipedia/commons/3/3e/Soccer_goal_icon.png") no-repeat center/contain;
     }
-
+    #goalkeeper {
+      position: absolute;
+      top: 160px;
+      right: 130px;
+      width: 60px;
+      height: 100px;
+      background: url("https://upload.wikimedia.org/wikipedia/commons/7/70/Cartoon-soccer-goalie.png") no-repeat center/contain;
+    }
     #ball {
       position: absolute;
       bottom: 20px;
-      left: 380px;
+      left: 50px;
       width: 40px;
       height: 40px;
       background: url("https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg") no-repeat center/contain;
     }
-
-    #goalkeeper {
-      position: absolute;
-      top: 200px;
-      right: 120px;
-      width: 80px;
-      height: 120px;
-      background: url("https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Cartoon-soccer-goalie.png/240px-Cartoon-soccer-goalie.png") no-repeat center/contain;
-    }
-
     #score {
-      font-size: 24px;
+      font-size: 1.4em;
       margin-top: 10px;
+      font-weight: bold;
     }
-
     #message {
-      font-size: 20px;
-      margin-top: 10px;
-      color: yellow;
+      font-size: 1.2em;
+      margin: 10px;
     }
   </style>
 </head>
 <body>
   <header>
-    <img src="https://i.pravatar.cc/150?img=12" alt="My Picture">
-    <h1>⚽ Welcome to My Website ⚽</h1>
+    🎓 My Fun School Website + Soccer Game ⚽
   </header>
 
-  <!-- Schedule Section -->
   <section>
-    <h2>📚 My School Schedule</h2>
-    <img src="Screenshot-2025-09-26.png" alt="My School Schedule">
-    <p>(This is my weekly schedule)</p>
+    <h2>📅 My Class Schedule</h2>
+    <p>Here’s a snapshot of my weekly school schedule:</p>
+    <img src="Screenshot 2025-09-26 at 9.39.45 AM.png" alt="School Schedule" class="schedule" />
   </section>
 
-  <!-- After School -->
   <section>
-    <h2>🏃 After School Activities</h2>
-    <p>⚽ Soccer practice after school</p>
-    <p>📘 Homework and study time</p>
-    <p>🎮 Gaming & free time</p>
-  </section>
-
-  <!-- Countdown -->
-  <section>
-    <h2>⏳ Countdown Until School Ends</h2>
-    <p id="countdown"></p>
-  </section>
-
-  <!-- Sports Logos -->
-  <section>
-    <h2>🏀 My Favorite Teams</h2>
-    <img src="https://upload.wikimedia.org/wikipedia/en/8/8f/Boston_Celtics.svg" alt="Celtics Logo" width="100">
-    <img src="https://upload.wikimedia.org/wikipedia/en/6/6d/RedSoxPrimary_HangingSocks.svg" alt="Red Sox Logo" width="100">
-    <img src="https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg" alt="Real Madrid Logo" width="100">
-  </section>
-
-  <!-- Ronaldo and Kaka -->
-  <section>
-    <h2>⭐ Ronaldo & Kaká</h2>
-    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg" alt="Ronaldo" width="200">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fd/Kaka_AC_Milan_2007.jpg" alt="Kaká" width="200">
-  </section>
-
-  <!-- Sour Patch -->
-  <section>
-    <h2>🍬 Sour Patch Kid</h2>
-    <img src="https://upload.wikimedia.org/wikipedia/en/0/07/Sour_Patch_Kids.png" alt="Sour Patch" width="150">
-  </section>
-
-  <!-- Soccer Game -->
-  <section>
-    <h2>⚽ Soccer Shooting Game</h2>
+    <h2>⚽ Soccer Game (PC-Friendly)</h2>
     <div id="gameArea">
       <div id="goal"></div>
       <div id="goalkeeper"></div>
@@ -156,81 +103,68 @@
     <div id="message"></div>
     <p>
       Controls: <br>
-      <strong>Spacebar</strong> = Shoot <br>
-      <strong>⬆️ / ⬇️</strong> = Curve ball vertically
+      ⬅️ ➡️ ⬆️ ⬇️ = Move Ball <br>
+      Spacebar = Shoot
     </p>
   </section>
 
   <script>
-    // Countdown timer (last day of school example: June 10, 2026)
-    const endDate = new Date("June 10, 2026 15:00:00").getTime();
-    setInterval(function() {
-      const now = new Date().getTime();
-      const distance = endDate - now;
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      document.getElementById("countdown").innerHTML = days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
-    }, 1000);
+    const ball = document.getElementById("ball");
+    const goalie = document.getElementById("goalkeeper");
+    const goal = document.getElementById("goal");
+    const scoreEl = document.getElementById("score");
+    const message = document.getElementById("message");
 
-    // Soccer Game
-    let ball = document.getElementById("ball");
-    let goalkeeper = document.getElementById("goalkeeper");
-    let scoreDisplay = document.getElementById("score");
-    let message = document.getElementById("message");
     let score = 0;
     let shooting = false;
+    let ballX = 50;
+    let ballY = 340;
 
-    // Move goalkeeper
-    let direction = 2;
-    function moveGoalkeeper() {
-      let top = parseInt(window.getComputedStyle(goalkeeper).top);
-      if (top <= 100 || top >= 300) direction *= -1;
-      goalkeeper.style.top = top + direction + "px";
-    }
-    setInterval(moveGoalkeeper, 20);
+    // Move goalkeeper up & down
+    let goalieDir = 2;
+    setInterval(() => {
+      let top = parseInt(window.getComputedStyle(goalie).top);
+      if (top <= 100 || top >= 250) goalieDir *= -1;
+      goalie.style.top = (top + goalieDir) + "px";
+    }, 20);
 
-    // Shoot ball
-    document.addEventListener("keydown", function(e) {
-      if (e.code === "Space" && !shooting) {
-        shooting = true;
-        message.innerHTML = "";
-        shootBall();
-      }
+    // Control ball
+    document.addEventListener("keydown", (e) => {
+      if (shooting) return;
+      if (e.code === "ArrowUp" && ballY > 0) ballY -= 10;
+      if (e.code === "ArrowDown" && ballY < 360) ballY += 10;
+      if (e.code === "ArrowLeft" && ballX > 0) ballX -= 10;
+      if (e.code === "ArrowRight" && ballX < 760) ballX += 10;
+      if (e.code === "Space" && !shooting) shootBall();
+
+      ball.style.left = ballX + "px";
+      ball.style.top = ballY + "px";
     });
 
+    // Shoot toward goal
     function shootBall() {
-      let posX = parseInt(window.getComputedStyle(ball).left);
-      let posY = parseInt(window.getComputedStyle(ball).top || "460");
-
-      let yVelocity = -5;
-      let xVelocity = 10;
-
+      shooting = true;
       let interval = setInterval(() => {
-        posX += xVelocity;
-        posY += yVelocity;
+        ballX += 8;
+        ball.style.left = ballX + "px";
 
-        ball.style.left = posX + "px";
-        ball.style.top = posY + "px";
+        const ballRect = ball.getBoundingClientRect();
+        const goalieRect = goalie.getBoundingClientRect();
+        const goalRect = goal.getBoundingClientRect();
 
-        let ballRect = ball.getBoundingClientRect();
-        let keeperRect = goalkeeper.getBoundingClientRect();
-        let goalRect = document.getElementById("goal").getBoundingClientRect();
-
-        // Collision with goalkeeper
+        // Blocked by goalie
         if (
-          ballRect.right > keeperRect.left &&
-          ballRect.left < keeperRect.right &&
-          ballRect.bottom > keeperRect.top &&
-          ballRect.top < keeperRect.bottom
+          ballRect.right > goalieRect.left &&
+          ballRect.left < goalieRect.right &&
+          ballRect.bottom > goalieRect.top &&
+          ballRect.top < goalieRect.bottom
         ) {
           clearInterval(interval);
+          message.innerHTML = "❌ Blocked!";
           resetBall();
-          message.innerHTML = "😢 Blocked by Goalkeeper!";
         }
 
-        // Goal
+        // Scored a goal
         else if (
           ballRect.right > goalRect.left &&
           ballRect.top > goalRect.top &&
@@ -238,35 +172,29 @@
         ) {
           clearInterval(interval);
           score++;
-          scoreDisplay.innerHTML = "Score: " + score;
-          resetBall();
+          scoreEl.innerHTML = "Score: " + score;
           message.innerHTML = "🎉 GOAL!";
+          resetBall();
         }
 
-        // Miss
-        else if (posX > 800 || posY < 0) {
+        // Missed
+        else if (ballX > 800) {
           clearInterval(interval);
+          message.innerHTML = "😢 Missed!";
           resetBall();
-          message.innerHTML = "❌ Missed!";
         }
       }, 30);
-
-      // Arrow key control
-      document.addEventListener("keydown", function handleMove(e) {
-        if (!shooting) return;
-        if (e.code === "ArrowUp") {
-          posY -= 15;
-        }
-        if (e.code === "ArrowDown") {
-          posY += 15;
-        }
-      });
     }
 
+    // Reset ball after shot
     function resetBall() {
-      ball.style.left = "380px";
-      ball.style.top = "460px";
-      shooting = false;
+      setTimeout(() => {
+        ballX = 50;
+        ballY = 340;
+        ball.style.left = ballX + "px";
+        ball.style.top = ballY + "px";
+        shooting = false;
+      }, 800);
     }
   </script>
 </body>
