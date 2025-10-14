@@ -1,233 +1,86 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>My Fun School + Games Website</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      background: linear-gradient(135deg, #87cefa, #fefbd8);
-      color: #333;
-      text-align: center;
-    }
-    header {
-      background: #ffcc00;
-      padding: 20px;
-      border-bottom: 5px solid #333;
-    }
-    header img {
-      width: 100%;
-      max-height: 200px;
-      object-fit: cover;
-      border-radius: 12px;
-      margin-top: 10px;
-    }
-    section {
-      margin: 30px auto;
-      padding: 20px;
-      max-width: 900px;
-      background: white;
-      border-radius: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-    h2 {
-      color: #ff6600;
-    }
-    img.schedule {
-      width: 100%;
-      border-radius: 10px;
-      margin: 15px 0;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-    }
-
-    /* Soccer Game Styles */
-    #gameArea {
-      position: relative;
-      width: 800px;
-      height: 400px;
-      margin: 20px auto;
-      border: 5px solid white;
-      background: #3a9d23;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    #goal {
-      position: absolute;
-      top: 100px;
-      right: 0;
-      width: 120px;
-      height: 200px;
-      background: url("https://upload.wikimedia.org/wikipedia/commons/3/3e/Soccer_goal_icon.png") no-repeat center/contain;
-    }
-    #goalkeeper {
-      position: absolute;
-      top: 160px;
-      right: 130px;
-      width: 60px;
-      height: 100px;
-      background: url("https://upload.wikimedia.org/wikipedia/commons/7/70/Cartoon-soccer-goalie.png") no-repeat center/contain;
-    }
-    #ball {
-      position: absolute;
-      bottom: 20px;
-      left: 50px;
-      width: 40px;
-      height: 40px;
-      background: url("https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg") no-repeat center/contain;
-    }
-    #score {
-      font-size: 1.4em;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    #message {
-      font-size: 1.2em;
-      margin: 10px;
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fanpage Maker</title>
+  <meta name="description" content="Create custom fanpages with themes, accessories, images and export them.">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- HEADER -->
-  <header>
-    <h1>🎓 My Fun School Website + Games ⚽</h1>
-    <img src="https://cdn.pixabay.com/photo/2017/01/31/17/44/banner-2026066_960_720.png" alt="Cartoon Banner" />
+  <header class="header container">
+    <h1>Fanpage Maker</h1>
+    <p>Create and customize fanpages for your favorite teams, players, or anything you love.</p>
   </header>
 
-  <!-- ABOUT SECTION -->
-  <section>
-    <h2>👋 Welcome!</h2>
-    <p>
-      Hi! This is my personal website.  
-      Here you’ll find my school schedule, fun info about me, and games I’ve added for fun.  
-      Have a look around and enjoy!
-    </p>
-  </section>
+  <main class="container app-grid">
+    <section class="panel form-panel card">
+      <h2>Create a Fanpage</h2>
+      <label>Page Title
+        <input id="title" type="text" placeholder="e.g., Real Madrid Fanclub">
+      </label>
 
-  <!-- SCHEDULE SECTION -->
-  <section>
-    <h2>📅 My Class Schedule</h2>
-    <p>Here’s a snapshot of my weekly school schedule:</p>
-    <img src="Screenshot 2025-09-26 at 9.39.45 AM.png" alt="School Schedule" class="schedule" />
-  </section>
+      <label>Subtitle / Short description
+        <input id="subtitle" type="text" placeholder="e.g., We love football!">
+      </label>
 
-  <!-- FUN FACTS SECTION -->
-  <section>
-    <h2>🎉 Fun Facts About Me</h2>
-    <ul style="text-align: left; max-width: 600px; margin: auto; font-size: 1.1em;">
-      <li>I love playing soccer and video games.</li>
-      <li>My favorite subject is Science 🧪.</li>
-      <li>I enjoy coding websites (like this one!) ✨.</li>
-      <li>Cartoon art style is my favorite 🎨.</li>
-    </ul>
-  </section>
+      <label>Long Description
+        <textarea id="description" rows="5" placeholder="Write something about the page..."></textarea>
+      </label>
 
-  <!-- GAMES SECTION -->
-  <section>
-    <h2>🎮 Games Zone</h2>
-    <h3>⚽ Soccer Game</h3>
-    <div id="gameArea">
-      <div id="goal"></div>
-      <div id="goalkeeper"></div>
-      <div id="ball"></div>
-    </div>
-    <div id="score">Score: 0</div>
-    <div id="message"></div>
-    <p>
-      Controls: <br>
-      ⬅️ ➡️ ⬆️ ⬇️ = Move Ball <br>
-      Spacebar = Shoot
-    </p>
-  </section>
+      <label>Choose Category
+        <select id="category">
+          <option value="team">Team</option>
+          <option value="player">Player</option>
+          <option value="artist">Artist</option>
+          <option value="tv">TV Show</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
 
-  <script>
-    const ball = document.getElementById("ball");
-    const goalie = document.getElementById("goalkeeper");
-    const goal = document.getElementById("goal");
-    const scoreEl = document.getElementById("score");
-    const message = document.getElementById("message");
+      <label>Pick a Theme Color
+        <input id="themeColor" type="color" value="#0077ff">
+      </label>
 
-    let score = 0;
-    let shooting = false;
-    let ballX = 50;
-    let ballY = 340;
+      <fieldset class="accessories">
+        <legend>Accessories</legend>
+        <label><input type="checkbox" value="badge" class="accessory"> Badge</label>
+        <label><input type="checkbox" value="sticker" class="accessory"> Sticker</label>
+        <label><input type="checkbox" value="ribbon" class="accessory"> Ribbon</label>
+        <label><input type="checkbox" value="sparkles" class="accessory"> Sparkles</label>
+      </fieldset>
 
-    // Move goalkeeper up & down
-    let goalieDir = 2;
-    setInterval(() => {
-      let top = parseInt(window.getComputedStyle(goalie).top);
-      if (top <= 100 || top >= 250) goalieDir *= -1;
-      goalie.style.top = (top + goalieDir) + "px";
-    }, 20);
+      <label>Upload Header Image (optional)
+        <input id="imageUpload" type="file" accept="image/*">
+      </label>
 
-    // Control ball
-    document.addEventListener("keydown", (e) => {
-      if (shooting) return;
-      if (e.code === "ArrowUp" && ballY > 0) ballY -= 10;
-      if (e.code === "ArrowDown" && ballY < 360) ballY += 10;
-      if (e.code === "ArrowLeft" && ballX > 0) ballX -= 10;
-      if (e.code === "ArrowRight" && ballX < 760) ballX += 10;
-      if (e.code === "Space" && !shooting) shootBall();
+      <div class="form-row">
+        <button id="saveBtn" class="btn primary">Save Fanpage</button>
+        <button id="exportBtn" class="btn">Export HTML</button>
+      </div>
+    </section>
 
-      ball.style.left = ballX + "px";
-      ball.style.top = ballY + "px";
-    });
+    <section class="panel preview-panel card">
+      <h2>Live Preview</h2>
+      <div id="preview" class="preview">
+        <!-- preview rendered here -->
+      </div>
+    </section>
 
-    // Shoot toward goal
-    function shootBall() {
-      shooting = true;
-      let interval = setInterval(() => {
-        ballX += 8;
-        ball.style.left = ballX + "px";
+    <section class="panel list-panel card">
+      <h2>Saved Fanpages</h2>
+      <div id="list" class="list"></div>
+      <div class="form-row">
+        <button id="clearAll" class="btn danger">Clear All</button>
+      </div>
+    </section>
+  </main>
 
-        const ballRect = ball.getBoundingClientRect();
-        const goalieRect = goalie.getBoundingClientRect();
-        const goalRect = goal.getBoundingClientRect();
+  <footer class="footer container">
+    <p>Made with ❤️ — Fanpage Maker</p>
+    <small>Tip: Saved pages are stored in your browser (localStorage). Use Export to download a standalone HTML file.</small>
+  </footer>
 
-        // Blocked by goalie
-        if (
-          ballRect.right > goalieRect.left &&
-          ballRect.left < goalieRect.right &&
-          ballRect.bottom > goalieRect.top &&
-          ballRect.top < goalieRect.bottom
-        ) {
-          clearInterval(interval);
-          message.innerHTML = "❌ Blocked!";
-          resetBall();
-        }
-
-        // Scored a goal
-        else if (
-          ballRect.right > goalRect.left &&
-          ballRect.top > goalRect.top &&
-          ballRect.bottom < goalRect.bottom
-        ) {
-          clearInterval(interval);
-          score++;
-          scoreEl.innerHTML = "Score: " + score;
-          message.innerHTML = "🎉 GOAL!";
-          resetBall();
-        }
-
-        // Missed
-        else if (ballX > 800) {
-          clearInterval(interval);
-          message.innerHTML = "😢 Missed!";
-          resetBall();
-        }
-      }, 30);
-    }
-
-    // Reset ball after shot
-    function resetBall() {
-      setTimeout(() => {
-        ballX = 50;
-        ballY = 340;
-        ball.style.left = ballX + "px";
-        ball.style.top = ballY + "px";
-        shooting = false;
-      }, 800);
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
