@@ -1,86 +1,106 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fanpage Maker</title>
-  <meta name="description" content="Create custom fanpages with themes, accessories, images and export them.">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catch the Ball Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #87CEFA, #ffffff);
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+    }
+
+    #gameCanvas {
+      background: #fefefe;
+      border: 3px solid #333;
+      display: block;
+      margin: 20px auto;
+    }
+
+    h1 {
+      color: #333;
+      margin-top: 10px;
+    }
+
+    #score {
+      font-size: 20px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <header class="header container">
-    <h1>Fanpage Maker</h1>
-    <p>Create and customize fanpages for your favorite teams, players, or anything you love.</p>
-  </header>
+  <h1>🎯 Catch the Ball!</h1>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="score">Score: 0</div>
 
-  <main class="container app-grid">
-    <section class="panel form-panel card">
-      <h2>Create a Fanpage</h2>
-      <label>Page Title
-        <input id="title" type="text" placeholder="e.g., Real Madrid Fanclub">
-      </label>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
 
-      <label>Subtitle / Short description
-        <input id="subtitle" type="text" placeholder="e.g., We love football!">
-      </label>
+    let paddle = { x: 175, y: 550, width: 50, height: 10, speed: 7 };
+    let ball = { x: Math.random() * 380, y: 0, radius: 10, speed: 4 };
+    let score = 0;
 
-      <label>Long Description
-        <textarea id="description" rows="5" placeholder="Write something about the page..."></textarea>
-      </label>
+    // Move paddle
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && paddle.x > 0) paddle.x -= paddle.speed;
+      if (e.key === "ArrowRight" && paddle.x < canvas.width - paddle.width)
+        paddle.x += paddle.speed;
+    });
 
-      <label>Choose Category
-        <select id="category">
-          <option value="team">Team</option>
-          <option value="player">Player</option>
-          <option value="artist">Artist</option>
-          <option value="tv">TV Show</option>
-          <option value="other">Other</option>
-        </select>
-      </label>
+    function drawPaddle() {
+      ctx.fillStyle = "#333";
+      ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    }
 
-      <label>Pick a Theme Color
-        <input id="themeColor" type="color" value="#0077ff">
-      </label>
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.closePath();
+    }
 
-      <fieldset class="accessories">
-        <legend>Accessories</legend>
-        <label><input type="checkbox" value="badge" class="accessory"> Badge</label>
-        <label><input type="checkbox" value="sticker" class="accessory"> Sticker</label>
-        <label><input type="checkbox" value="ribbon" class="accessory"> Ribbon</label>
-        <label><input type="checkbox" value="sparkles" class="accessory"> Sparkles</label>
-      </fieldset>
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPaddle();
+      drawBall();
 
-      <label>Upload Header Image (optional)
-        <input id="imageUpload" type="file" accept="image/*">
-      </label>
+      ball.y += ball.speed;
 
-      <div class="form-row">
-        <button id="saveBtn" class="btn primary">Save Fanpage</button>
-        <button id="exportBtn" class="btn">Export HTML</button>
-      </div>
-    </section>
+      // Check for catch
+      if (
+        ball.y + ball.radius >= paddle.y &&
+        ball.x >= paddle.x &&
+        ball.x <= paddle.x + paddle.width
+      ) {
+        score++;
+        scoreDisplay.textContent = "Score: " + score;
+        resetBall();
+      }
 
-    <section class="panel preview-panel card">
-      <h2>Live Preview</h2>
-      <div id="preview" class="preview">
-        <!-- preview rendered here -->
-      </div>
-    </section>
+      // Missed ball
+      if (ball.y > canvas.height) {
+        alert("Game Over! Final Score: " + score);
+        score = 0;
+        scoreDisplay.textContent = "Score: 0";
+        resetBall();
+      }
 
-    <section class="panel list-panel card">
-      <h2>Saved Fanpages</h2>
-      <div id="list" class="list"></div>
-      <div class="form-row">
-        <button id="clearAll" class="btn danger">Clear All</button>
-      </div>
-    </section>
-  </main>
+      requestAnimationFrame(update);
+    }
 
-  <footer class="footer container">
-    <p>Made with ❤️ — Fanpage Maker</p>
-    <small>Tip: Saved pages are stored in your browser (localStorage). Use Export to download a standalone HTML file.</small>
-  </footer>
+    function resetBall() {
+      ball.x = Math.random() * 380;
+      ball.y = 0;
+      ball.speed = 4 + Math.random() * 2;
+    }
 
-  <script src="app.js"></script>
+    update();
+  </script>
 </body>
 </html>
