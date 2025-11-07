@@ -3,104 +3,162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catch the Ball Game</title>
+  <title>First Person Maze</title>
   <style>
     body {
       margin: 0;
-      background: linear-gradient(180deg, #87CEFA, #ffffff);
       overflow: hidden;
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
+      background: black;
+      color: white;
       text-align: center;
     }
-
-    #gameCanvas {
-      background: #fefefe;
-      border: 3px solid #333;
-      display: block;
-      margin: 20px auto;
-    }
-
-    h1 {
-      color: #333;
-      margin-top: 10px;
-    }
-
-    #score {
+    #instructions {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
       font-size: 20px;
-      font-weight: bold;
+      z-index: 1;
     }
   </style>
 </head>
 <body>
-  <h1>🎯 Catch the Ball!</h1>
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="score">Score: 0</div>
+  <div id="instructions">Click to start. Move with W A S D, look with mouse.</div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreDisplay = document.getElementById("score");
+    let camera, scene, renderer, controls;
+    let objects = [];
+    const move = { forward: false, backward: false, left: false, right: false };
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    const speed = 400.0;
 
-    let paddle = { x: 175, y: 550, width: 50, height: 10, speed: 7 };
-    let ball = { x: Math.random() * 380, y: 0, radius: 10, speed: 4 };
-    let score = 0;
+    init();
+    animate();
 
-    // Move paddle
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft" && paddle.x > 0) paddle.x -= paddle.speed;
-      if (e.key === "ArrowRight" && paddle.x < canvas.width - paddle.width)
-        paddle.x += paddle.speed;
-    });
+    function init() {
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x202020);
 
-    function drawPaddle() {
-      ctx.fillStyle = "#333";
-      ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
-    }
+      // Light
+      const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+      light.position.set(0, 200, 0);
+      scene.add(light);
 
-    function drawBall() {
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = "red";
-      ctx.fill();
-      ctx.closePath();
-    }
+      // Floor
+      const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+      const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
 
-    function update() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawPaddle();
-      drawBall();
-
-      ball.y += ball.speed;
-
-      // Check for catch
-      if (
-        ball.y + ball.radius >= paddle.y &&
-        ball.x >= paddle.x &&
-        ball.x <= paddle.x + paddle.width
-      ) {
-        score++;
-        scoreDisplay.textContent = "Score: " + score;
-        resetBall();
+      // Walls (maze)
+      const wallGeometry = new THREE.BoxGeometry(50, 100, 10);
+      const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x2196f3 });
+      for (let i = 0; i < 50; i++) {
+        const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+        wall.position.x = Math.random() * 800 - 400;
+        wall.position.z = Math.random() * 800 - 400;
+        scene.add(wall);
+        objects.push(wall);
       }
 
-      // Missed ball
-      if (ball.y > canvas.height) {
-        alert("Game Over! Final Score: " + score);
-        score = 0;
-        scoreDisplay.textContent = "Score: 0";
-        resetBall();
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Controls
+      controls = new THREE.PointerLockControls(camera, document.body);
+      document.addEventListener('click', () => {
+        controls.lock();
+      });
+      controls.addEventListener('lock', () => {
+        document.getElementById('instructions').style.display = 'none';
+      });
+      controls.addEventListener('unlock', () => {
+        document.getElementById('instructions').style.display = '';
+      });
+      scene.add(controls.getObject());
+
+      // Keyboard controls
+      document.addEventListener('keydown', onKeyDown);
+      document.addEventListener('keyup', onKeyUp);
+
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function onKeyDown(event) {
+      switch (event.code) {
+        case 'ArrowUp':
+        case 'KeyW':
+          move.forward = true;
+          break;
+        case 'ArrowLeft':
+        case 'KeyA':
+          move.left = true;
+          break;
+        case 'ArrowDown':
+        case 'KeyS':
+          move.backward = true;
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          move.right = true;
+          break;
       }
-
-      requestAnimationFrame(update);
     }
 
-    function resetBall() {
-      ball.x = Math.random() * 380;
-      ball.y = 0;
-      ball.speed = 4 + Math.random() * 2;
+    function onKeyUp(event) {
+      switch (event.code) {
+        case 'ArrowUp':
+        case 'KeyW':
+          move.forward = false;
+          break;
+        case 'ArrowLeft':
+        case 'KeyA':
+          move.left = false;
+          break;
+        case 'ArrowDown':
+        case 'KeyS':
+          move.backward = false;
+          break;
+        case 'ArrowRight':
+        case 'KeyD':
+          move.right = false;
+          break;
+      }
     }
 
-    update();
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = 0.05;
+
+      velocity.x -= velocity.x * 10.0 * delta;
+      velocity.z -= velocity.z * 10.0 * delta;
+
+      direction.z = Number(move.forward) - Number(move.backward);
+      direction.x = Number(move.right) - Number(move.left);
+      direction.normalize();
+
+      if (move.forward || move.backward) velocity.z -= direction.z * speed * delta;
+      if (move.left || move.right) velocity.x -= direction.x * speed * delta;
+
+      controls.moveRight(-velocity.x * delta);
+      controls.moveForward(-velocity.z * delta);
+
+      renderer.render(scene, camera);
+    }
   </script>
 </body>
 </html>
