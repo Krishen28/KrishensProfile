@@ -5,64 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>First Person Maze</title>
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      font-family: Arial, sans-serif;
       background: black;
+      height: 100%;
+      font-family: sans-serif;
       color: white;
-      text-align: center;
+      user-select: none;
     }
     #instructions {
       position: absolute;
-      top: 20px;
+      top: 40%;
       width: 100%;
       text-align: center;
-      font-size: 20px;
+      font-size: 22px;
       z-index: 1;
     }
   </style>
 </head>
 <body>
-  <div id="instructions">Click to start. Move with W A S D, look with mouse.</div>
+  <div id="instructions">Click to start<br><small>Move: W A S D | Look: Mouse</small></div>
+
+  <!-- Three.js libraries -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
   <script>
     let camera, scene, renderer, controls;
-    let objects = [];
     const move = { forward: false, backward: false, left: false, right: false };
     const velocity = new THREE.Vector3();
     const direction = new THREE.Vector3();
-    const speed = 400.0;
+    const objects = [];
 
     init();
     animate();
 
     function init() {
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+      // Scene setup
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x202020);
 
-      // Light
-      const light = new THREE.HemisphereLight(0xffffff, 0x444444);
-      light.position.set(0, 200, 0);
-      scene.add(light);
+      // Camera setup
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+      camera.position.set(0, 20, 100); // start above the floor
+
+      // Lighting
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+      hemiLight.position.set(0, 200, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+      dirLight.position.set(100, 200, 100);
+      scene.add(dirLight);
 
       // Floor
-      const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+      const floorGeometry = new THREE.PlaneGeometry(1000, 1000);
       const floorMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
       const floor = new THREE.Mesh(floorGeometry, floorMaterial);
       floor.rotation.x = -Math.PI / 2;
       scene.add(floor);
 
-      // Walls (maze)
-      const wallGeometry = new THREE.BoxGeometry(50, 100, 10);
+      // Maze walls
+      const wallGeometry = new THREE.BoxGeometry(50, 60, 10);
       const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x2196f3 });
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 60; i++) {
         const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-        wall.position.x = Math.random() * 800 - 400;
-        wall.position.z = Math.random() * 800 - 400;
+        wall.position.set(
+          Math.random() * 800 - 400,
+          30,
+          Math.random() * 800 - 400
+        );
         scene.add(wall);
         objects.push(wall);
       }
@@ -70,13 +84,12 @@
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
       document.body.appendChild(renderer.domElement);
 
-      // Controls
+      // Pointer lock controls
       controls = new THREE.PointerLockControls(camera, document.body);
-      document.addEventListener('click', () => {
-        controls.lock();
-      });
+      document.addEventListener('click', () => controls.lock());
       controls.addEventListener('lock', () => {
         document.getElementById('instructions').style.display = 'none';
       });
@@ -85,10 +98,9 @@
       });
       scene.add(controls.getObject());
 
-      // Keyboard controls
+      // Keyboard events
       document.addEventListener('keydown', onKeyDown);
       document.addEventListener('keyup', onKeyUp);
-
       window.addEventListener('resize', onWindowResize);
     }
 
@@ -98,51 +110,36 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    function onKeyDown(event) {
-      switch (event.code) {
+    function onKeyDown(e) {
+      switch (e.code) {
         case 'ArrowUp':
-        case 'KeyW':
-          move.forward = true;
-          break;
+        case 'KeyW': move.forward = true; break;
         case 'ArrowLeft':
-        case 'KeyA':
-          move.left = true;
-          break;
+        case 'KeyA': move.left = true; break;
         case 'ArrowDown':
-        case 'KeyS':
-          move.backward = true;
-          break;
+        case 'KeyS': move.backward = true; break;
         case 'ArrowRight':
-        case 'KeyD':
-          move.right = true;
-          break;
+        case 'KeyD': move.right = true; break;
       }
     }
 
-    function onKeyUp(event) {
-      switch (event.code) {
+    function onKeyUp(e) {
+      switch (e.code) {
         case 'ArrowUp':
-        case 'KeyW':
-          move.forward = false;
-          break;
+        case 'KeyW': move.forward = false; break;
         case 'ArrowLeft':
-        case 'KeyA':
-          move.left = false;
-          break;
+        case 'KeyA': move.left = false; break;
         case 'ArrowDown':
-        case 'KeyS':
-          move.backward = false;
-          break;
+        case 'KeyS': move.backward = false; break;
         case 'ArrowRight':
-        case 'KeyD':
-          move.right = false;
-          break;
+        case 'KeyD': move.right = false; break;
       }
     }
 
     function animate() {
       requestAnimationFrame(animate);
       const delta = 0.05;
+      const speed = 300.0;
 
       velocity.x -= velocity.x * 10.0 * delta;
       velocity.z -= velocity.z * 10.0 * delta;
