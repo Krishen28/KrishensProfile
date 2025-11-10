@@ -3,131 +3,105 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Krishen's 3D Game</title>
+<title>3D Game Fixed</title>
 <style>
-  html, body {
-    margin: 0;
-    overflow: hidden;
-    height: 100%;
-    background: #000;
-    font-family: sans-serif;
-    color: white;
-  }
-  #info {
-    position: absolute;
-    top: 10px;
-    width: 100%;
-    text-align: center;
-    z-index: 1;
-  }
+  html,body {margin:0;overflow:hidden;height:100%;background:#000;color:white;font-family:sans-serif;}
+  #info{position:absolute;top:10px;width:100%;text-align:center;z-index:1;}
 </style>
 </head>
 <body>
-<div id="info">Click once → Move with W A S D | Look with mouse</div>
+<div id="info">Use W A S D to move | Move mouse to look around</div>
 
-<!-- Reliable CDN versions -->
 <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
 <script>
-let camera, scene, renderer, controls;
-const move = {forward:false, backward:false, left:false, right:false};
-const velocity = new THREE.Vector3();
-const direction = new THREE.Vector3();
+let camera, scene, renderer;
+const keys = {};
+let pitch = 0, yaw = 0;
+const moveSpeed = 0.2;
 
 init();
 animate();
 
-function init(){
-  // scene setup
+function init() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb); // bright sky
+  scene.background = new THREE.Color(0x87ceeb); // sky
 
-  // camera setup
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 2, 10); // start above floor
+  camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(0, 2, 5);
 
-  // lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const sun = new THREE.DirectionalLight(0xffffff, 1);
-  sun.position.set(10, 20, 10);
-  scene.add(sun);
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5,10,5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
   // floor
-  const floorGeo = new THREE.PlaneGeometry(200, 200);
-  const floorMat = new THREE.MeshPhongMaterial({color: 0xffffff});
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x = -Math.PI / 2;
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(200,200),
+    new THREE.MeshPhongMaterial({color:0xffffff})
+  );
+  floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // big red cube so you *always* see something
+  // cube
   const cube = new THREE.Mesh(
     new THREE.BoxGeometry(2,2,2),
-    new THREE.MeshPhongMaterial({color: 0xff0000})
+    new THREE.MeshPhongMaterial({color:0xff0000})
   );
-  cube.position.set(0, 1, 0);
+  cube.position.set(0,1,0);
   scene.add(cube);
 
-  // extra cubes
-  const wallGeo = new THREE.BoxGeometry(2, 2, 2);
-  const wallMat = new THREE.MeshPhongMaterial({color: 0x2196f3});
+  // random boxes
+  const wallGeo = new THREE.BoxGeometry(2,2,2);
+  const wallMat = new THREE.MeshPhongMaterial({color:0x2196f3});
   for(let i=0;i<40;i++){
-    const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.set(Math.random()*80-40, 1, Math.random()*80-40);
-    scene.add(wall);
+    const w = new THREE.Mesh(wallGeo, wallMat);
+    w.position.set(Math.random()*80-40, 1, Math.random()*80-40);
+    scene.add(w);
   }
 
-  // renderer
   renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(innerWidth, innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // controls
-  controls = new THREE.PointerLockControls(camera, document.body);
-  document.addEventListener('click', ()=>controls.lock());
-  scene.add(controls.getObject());
+  document.addEventListener('keydown', e => keys[e.code] = true);
+  document.addEventListener('keyup', e => keys[e.code] = false);
 
-  // keyboard input
-  document.addEventListener('keydown', e=>{
-    if(e.code==='KeyW') move.forward=true;
-    if(e.code==='KeyS') move.backward=true;
-    if(e.code==='KeyA') move.left=true;
-    if(e.code==='KeyD') move.right=true;
-  });
-  document.addEventListener('keyup', e=>{
-    if(e.code==='KeyW') move.forward=false;
-    if(e.code==='KeyS') move.backward=false;
-    if(e.code==='KeyA') move.left=false;
-    if(e.code==='KeyD') move.right=false;
-  });
-
-  window.addEventListener('resize', ()=>{
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  // Mouse look
+  document.addEventListener('mousemove', e => {
+    yaw -= e.movementX * 0.002;
+    pitch -= e.movementY * 0.002;
+    pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+    camera.rotation.set(pitch, yaw, 0);
   });
 }
 
 function animate(){
   requestAnimationFrame(animate);
-
-  // spin red cube (visual confirmation)
-  const red = scene.children.find(o=>o.material && o.material.color && o.material.color.getHex()===0xff0000);
-  if(red) red.rotation.y += 0.01;
-
-  const delta = 0.05, speed = 80.0;
-  velocity.x -= velocity.x * 10.0 * delta;
-  velocity.z -= velocity.z * 10.0 * delta;
-  direction.z = Number(move.forward) - Number(move.backward);
-  direction.x = Number(move.right) - Number(move.left);
-  direction.normalize();
-  if(move.forward||move.backward) velocity.z -= direction.z * speed * delta;
-  if(move.left||move.right) velocity.x -= direction.x * speed * delta;
-  controls.moveRight(-velocity.x * delta);
-  controls.moveForward(-velocity.z * delta);
-
+  movePlayer();
   renderer.render(scene, camera);
 }
+
+function movePlayer(){
+  const dir = new THREE.Vector3();
+  if(keys['KeyW']) dir.z -= 1;
+  if(keys['KeyS']) dir.z += 1;
+  if(keys['KeyA']) dir.x -= 1;
+  if(keys['KeyD']) dir.x += 1;
+  dir.normalize();
+
+  const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+  const right = new THREE.Vector3(Math.sin(yaw + Math.PI/2), 0, Math.cos(yaw + Math.PI/2));
+
+  camera.position.addScaledVector(forward, dir.z * moveSpeed);
+  camera.position.addScaledVector(right, dir.x * moveSpeed);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
 </script>
 </body>
 </html>
