@@ -1,157 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Block Maze Sword Game</title>
-<style>
-  html,body {margin:0;overflow:hidden;height:100%;background:#000;color:white;font-family:sans-serif;}
-  #info{position:absolute;top:10px;width:100%;text-align:center;z-index:1;}
-</style>
-</head>
-<body>
-<div id="info">W A S D = Move | Mouse = Look | Click = Swing Sword</div>
-
-<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-
-<script>
-let scene,camera,renderer;
-const keys={},monsters=[],walls=[];
-let yaw=0,pitch=0;
-let sword,swordSwing=0,isSwinging=false;
-
-init();
-animate();
-
-function init(){
-  scene=new THREE.Scene();
-  scene.background=new THREE.Color(0x87ceeb);
-
-  camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
-  camera.position.set(0,2,8);
-
-  const sun=new THREE.DirectionalLight(0xffffff,1);
-  sun.position.set(5,10,5);
-  scene.add(sun);
-  scene.add(new THREE.AmbientLight(0xffffff,0.5));
-
-  // floor
-  const floor=new THREE.Mesh(
-    new THREE.PlaneGeometry(300,300),
-    new THREE.MeshPhongMaterial({color:0x55aa55})
-  );
-  floor.rotation.x=-Math.PI/2;
-  scene.add(floor);
-
-  // maze walls (grid of cubes)
-  const wallGeo=new THREE.BoxGeometry(4,4,4);
-  const wallMat=new THREE.MeshPhongMaterial({color:0x888888});
-  for(let x=-40;x<=40;x+=8){
-    for(let z=-40;z<=40;z+=8){
-      if(Math.random()<0.3){ // sparse maze
-        const wall=new THREE.Mesh(wallGeo,wallMat);
-        wall.position.set(x,2,z);
-        scene.add(wall);
-        walls.push(wall);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Maze Game with Monster</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: black;
       }
-    }
-  }
+      #info {
+        position: absolute;
+        top: 10px;
+        width: 100%;
+        text-align: center;
+        color: white;
+        font-family: sans-serif;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">Use W A S D to move | Move mouse to look | Space = Attack</div>
 
-  // monsters
-  const mGeo=new THREE.BoxGeometry(2,2,2);
-  const mMat=new THREE.MeshPhongMaterial({color:0xff0000});
-  for(let i=0;i<5;i++){
-    const m=new THREE.Mesh(mGeo,mMat);
-    m.position.set(Math.random()*80-40,1,Math.random()*80-40);
-    scene.add(m);
-    monsters.push(m);
-  }
+    <!-- Three.js and PointerLock controls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
-  // sword
-  const sGeo=new THREE.BoxGeometry(0.2,1.5,0.2);
-  const sMat=new THREE.MeshPhongMaterial({color:0xccaa00});
-  sword=new THREE.Mesh(sGeo,sMat);
-  sword.position.set(0.5,-0.5,-1.5);
-  camera.add(sword);
-  scene.add(camera);
+    <script>
+      let camera, scene, renderer, controls;
+      let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+      let velocity = new THREE.Vector3();
+      let direction = new THREE.Vector3();
+      let monster, swordSwing = false;
 
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(innerWidth,innerHeight);
-  document.body.appendChild(renderer.domElement);
+      init();
+      animate();
 
-  document.addEventListener("keydown",e=>keys[e.code]=true);
-  document.addEventListener("keyup",e=>keys[e.code]=false);
+      function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // sky blue
 
-  document.addEventListener("mousemove",e=>{
-    yaw-=e.movementX*0.002;
-    pitch-=e.movementY*0.002;
-    pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
-    camera.rotation.set(pitch,yaw,0);
-  });
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-  document.addEventListener("click",()=>{
-    if(!isSwinging){
-      isSwinging=true;
-      swordSwing=0;
-    }
-  });
+        controls = new THREE.PointerLockControls(camera, document.body);
+        document.body.addEventListener('click', () => controls.lock());
+        scene.add(controls.getObject());
 
-  window.addEventListener("resize",()=>{
-    camera.aspect=innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
-  });
-}
+        // Ground
+        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+        const groundMat = new THREE.MeshBasicMaterial({ color: 0x888888 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
 
-function animate(){
-  requestAnimationFrame(animate);
-  movePlayer();
-  moveMonsters();
-  updateSword();
-  renderer.render(scene,camera);
-}
+        // Maze walls
+        const wallGeo = new THREE.BoxGeometry(10, 10, 10);
+        const wallMat = new THREE.MeshBasicMaterial({ color: 0x0033aa });
+        for (let i = 0; i < 50; i++) {
+          const wall = new THREE.Mesh(wallGeo, wallMat);
+          wall.position.set((Math.random() - 0.5) * 400, 5, (Math.random() - 0.5) * 400);
+          scene.add(wall);
+        }
 
-function movePlayer(){
-  const speed=0.3;
-  const dir=new THREE.Vector3();
-  if(keys["KeyW"]) dir.z-=1;
-  if(keys["KeyS"]) dir.z+=1;
-  if(keys["KeyA"]) dir.x-=1;
-  if(keys["KeyD"]) dir.x+=1;
-  dir.normalize();
+        // Monster
+        const monsterGeo = new THREE.BoxGeometry(8, 8, 8);
+        const monsterMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        monster = new THREE.Mesh(monsterGeo, monsterMat);
+        monster.position.set(0, 4, -50);
+        scene.add(monster);
 
-  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
-  const right=new THREE.Vector3(Math.sin(yaw+Math.PI/2),0,Math.cos(yaw+Math.PI/2));
-  camera.position.addScaledVector(forward,dir.z*speed);
-  camera.position.addScaledVector(right,dir.x*speed);
-}
+        // Controls
+        const onKeyDown = (e) => {
+          switch (e.code) {
+            case 'ArrowUp':
+            case 'KeyW': moveForward = true; break;
+            case 'ArrowLeft':
+            case 'KeyA': moveLeft = true; break;
+            case 'ArrowDown':
+            case 'KeyS': moveBackward = true; break;
+            case 'ArrowRight':
+            case 'KeyD': moveRight = true; break;
+            case 'Space': swordSwing = true; break;
+          }
+        };
+        const onKeyUp = (e) => {
+          switch (e.code) {
+            case 'ArrowUp':
+            case 'KeyW': moveForward = false; break;
+            case 'ArrowLeft':
+            case 'KeyA': moveLeft = false; break;
+            case 'ArrowDown':
+            case 'KeyS': moveBackward = false; break;
+            case 'ArrowRight':
+            case 'KeyD': moveRight = false; break;
+            case 'Space': swordSwing = false; break;
+          }
+        };
 
-function moveMonsters(){
-  const playerPos=camera.position;
-  for(let i=monsters.length-1;i>=0;i--){
-    const m=monsters[i];
-    const toPlayer=playerPos.clone().sub(m.position);
-    if(toPlayer.length()<1.5 && isSwinging && swordSwing<Math.PI/3){
-      scene.remove(m);
-      monsters.splice(i,1);
-      continue;
-    }
-    toPlayer.y=0;
-    toPlayer.normalize();
-    m.position.addScaledVector(toPlayer,0.05);
-  }
-}
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
 
-function updateSword(){
-  if(isSwinging){
-    swordSwing+=0.2;
-    sword.rotation.x=Math.sin(swordSwing)*Math.PI/4;
-    if(swordSwing>Math.PI){
-      isSwinging=false;
-      sword.rotation.x=0;
-    }
-  }
-}
-</script>
-</body>
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (controls.isLocked) {
+          const delta = 0.1;
+          velocity.x -= velocity.x * 10.0 * delta;
+          velocity.z -= velocity.z * 10.0 * delta;
+
+          direction.z = Number(moveForward) - Number(moveBackward);
+          direction.x = Number(moveRight) - Number(moveLeft);
+          direction.normalize();
+
+          if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+          if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+
+          controls.moveRight(-velocity.x * delta);
+          controls.moveForward(-velocity.z * delta);
+
+          // Monster movement
+          const playerPos = controls.getObject().position;
+          const monsterDir = new THREE.Vector3().subVectors(playerPos, monster.position).normalize();
+          monster.position.addScaledVector(monsterDir, 0.2);
+
+          // Attack monster
+          const dist = playerPos.distanceTo(monster.position);
+          if (swordSwing && dist < 10) {
+            scene.remove(monster);
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
 </html>
