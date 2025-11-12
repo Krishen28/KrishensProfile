@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FPS Maze — Sword & Monsters (Fixed)</title>
+<title>FPS Maze — Fixed for GitHub Pages</title>
 <style>
   html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:sans-serif}
-  #hud{position: absolute; left: 10px; top: 10px; color: white; z-index: 10}
+  #hud{position:absolute;left:10px;top:10px;color:white;z-index:10}
   #info{position:absolute;top:10px;left:50%;transform:translateX(-50%);color:white;z-index:10}
   #healthBar{width:200px;height:18px;background:#333;border-radius:6px;overflow:hidden}
   #healthFill{height:100%;background:#c33;width:100%}
@@ -14,20 +14,19 @@
 </style>
 </head>
 <body>
-<div id="info">Click screen to lock mouse → Move: W A S D | Swing: Left Click</div>
+<div id="info">Click to lock mouse → Move: W A S D | Attack: Left Click</div>
 <div id="hud">
   <div>Health</div>
   <div id="healthBar"><div id="healthFill"></div></div>
 </div>
 
-<!-- ✅ Using proper absolute URLs for module imports -->
-<script type="module">
-import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
-import { PointerLockControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/PointerLockControls.js';
+<!-- ✅ Load three.js and controls as global scripts -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
+<script>
 let camera, scene, renderer, controls;
 const move = { forward:false, backward:false, left:false, right:false };
-let velocity = new THREE.Vector3();
 const monsters = [];
 const walls = [];
 let swordCooldown = 0;
@@ -57,7 +56,6 @@ function init(){
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // Maze walls
   const wallGeo = new THREE.BoxGeometry(4, 4, 4);
   const wallMat = new THREE.MeshPhongMaterial({ color: 0x556b2f });
   for(let x=-48;x<=48;x+=4){
@@ -71,7 +69,6 @@ function init(){
     }
   }
 
-  // Monsters
   const mGeo=new THREE.BoxGeometry(2,2,2);
   const mMat=new THREE.MeshPhongMaterial({color:0xff4444});
   for(let i=0;i<6;i++){
@@ -81,7 +78,6 @@ function init(){
     monsters.push({mesh:m,hp:3,speed:0.05,attackCooldown:0});
   }
 
-  // Sword
   const swordGeo=new THREE.BoxGeometry(0.15,1.25,0.15);
   const swordMat=new THREE.MeshPhongMaterial({color:0xccaa33});
   const sword=new THREE.Mesh(swordGeo,swordMat);
@@ -93,7 +89,7 @@ function init(){
   renderer.setSize(innerWidth,innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  controls=new PointerLockControls(camera,document.body);
+  controls=new THREE.PointerLockControls(camera,document.body);
   document.addEventListener('click',()=>{ if(!controls.isLocked) controls.lock(); });
 
   window.addEventListener('pointerdown',ev=>{
@@ -118,7 +114,7 @@ function init(){
 
   controls.addEventListener('lock',()=>document.getElementById('info').style.display='none');
   controls.addEventListener('unlock',()=>document.getElementById('info').style.display='');
-  window.addEventListener('resize',()=>onResize());
+  window.addEventListener('resize',onResize);
 }
 
 function swingSword(){
@@ -162,7 +158,6 @@ function animate(now=performance.now()){
     moveVec.normalize();
     camera.position.addScaledVector(moveVec,speed*dt);
 
-    // Monster behavior
     for(const m of monsters){
       const dir=new THREE.Vector3().subVectors(camera.position,m.mesh.position);
       dir.y=0;
@@ -195,7 +190,6 @@ function updateHealth(){
   HEALTH_FILL.style.background=pct>60?'#3c9':pct>30?'#fc3':'#c33';
 }
 updateHealth();
-
 </script>
 </body>
 </html>
