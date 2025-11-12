@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FPS Maze — Sword & Monsters (module)</title>
+<title>FPS Maze — Sword & Monsters (Fixed)</title>
 <style>
   html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:sans-serif}
   #hud{position: absolute; left: 10px; top: 10px; color: white; z-index: 10}
@@ -20,14 +20,13 @@
   <div id="healthBar"><div id="healthFill"></div></div>
 </div>
 
+<!-- ✅ Using proper absolute URLs for module imports -->
 <script type="module">
-/* Module imports (ES modules) */
 import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
 import { PointerLockControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/PointerLockControls.js';
 
 let camera, scene, renderer, controls;
 const move = { forward:false, backward:false, left:false, right:false };
-let yaw = 0, pitch = 0;
 let velocity = new THREE.Vector3();
 const monsters = [];
 const walls = [];
@@ -40,20 +39,17 @@ init();
 animate();
 
 function init(){
-  // Scene & Camera
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
 
   camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000);
   camera.position.set(0, 2, 10);
 
-  // Lights
   scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.8));
   const dir = new THREE.DirectionalLight(0xffffff, 0.7);
   dir.position.set(5, 10, 7);
   scene.add(dir);
 
-  // Floor
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(300, 300),
     new THREE.MeshPhongMaterial({ color: 0x8fbf8f })
@@ -61,231 +57,144 @@ function init(){
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // Build a simple blocky "maze" (grid)
+  // Maze walls
   const wallGeo = new THREE.BoxGeometry(4, 4, 4);
   const wallMat = new THREE.MeshPhongMaterial({ color: 0x556b2f });
-  // create outer border and some internal blocks
-  for(let x=-48; x<=48; x+=4){
-    for(let z=-48; z<=48; z+=4){
-      // border
-      if (x === -48 || x === 48 || z === -48 || z === 48) {
-        const b = new THREE.Mesh(wallGeo, wallMat);
-        b.position.set(x, 2, z);
-        scene.add(b);
-        walls.push(b);
-      } else {
-        // random obstacles to make a maze-like field
-        if (Math.random() < 0.08) {
-          const b = new THREE.Mesh(wallGeo, wallMat);
-          b.position.set(x, 2, z);
-          scene.add(b);
-          walls.push(b);
-        }
+  for(let x=-48;x<=48;x+=4){
+    for(let z=-48;z<=48;z+=4){
+      if(x===-48||x===48||z===-48||z===48||Math.random()<0.07){
+        const w=new THREE.Mesh(wallGeo,wallMat);
+        w.position.set(x,2,z);
+        scene.add(w);
+        walls.push(w);
       }
     }
   }
 
-  // Add a visible "spawn" platform / cube near start
-  const startCube = new THREE.Mesh(new THREE.BoxGeometry(3,3,3), new THREE.MeshPhongMaterial({color:0x4444ff}));
-  startCube.position.set(0,1.5,0);
-  scene.add(startCube);
-
-  // Monsters: a handful of red cubes
-  const mGeo = new THREE.BoxGeometry(2,2,2);
-  const mMat = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+  // Monsters
+  const mGeo=new THREE.BoxGeometry(2,2,2);
+  const mMat=new THREE.MeshPhongMaterial({color:0xff4444});
   for(let i=0;i<6;i++){
-    const m = new THREE.Mesh(mGeo, mMat);
-    // spawn away from player
-    m.position.set((Math.random()*80)-40, 1, (Math.random()*80)-40);
+    const m=new THREE.Mesh(mGeo,mMat);
+    m.position.set((Math.random()*80)-40,1,(Math.random()*80)-40);
     scene.add(m);
-    monsters.push({ mesh: m, hp: 3, speed: 0.03 + Math.random()*0.05, attackCooldown: 0 });
+    monsters.push({mesh:m,hp:3,speed:0.05,attackCooldown:0});
   }
 
-  // Sword object attached to camera (simple visual)
-  const swordGeo = new THREE.BoxGeometry(0.15, 1.25, 0.15);
-  const swordMat = new THREE.MeshPhongMaterial({ color: 0xccaa33 });
-  const sword = new THREE.Mesh(swordGeo, swordMat);
-  sword.position.set(0.5, -0.7, -1.5);
+  // Sword
+  const swordGeo=new THREE.BoxGeometry(0.15,1.25,0.15);
+  const swordMat=new THREE.MeshPhongMaterial({color:0xccaa33});
+  const sword=new THREE.Mesh(swordGeo,swordMat);
+  sword.position.set(0.5,-0.7,-1.5);
   camera.add(sword);
-  scene.add(camera); // camera added to scene so child is rendered
+  scene.add(camera);
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(innerWidth, innerHeight);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Pointer lock controls (this is the ES-module version)
-  controls = new PointerLockControls(camera, document.body);
-  document.addEventListener('click', () => {
-    // left click triggers sword swing + pointer lock
-    // lock first if not locked
-    if (!controls.isLocked) controls.lock();
-  });
+  controls=new PointerLockControls(camera,document.body);
+  document.addEventListener('click',()=>{ if(!controls.isLocked) controls.lock(); });
 
-  // Left click for swing
-  window.addEventListener('pointerdown', (ev) => {
-    // only left button
-    if (ev.button === 0) {
-      if (controls.isLocked && swordCooldown <= 0) {
-        swordCooldown = 0.4; // seconds
-        attemptSwordHit();
-      }
+  window.addEventListener('pointerdown',ev=>{
+    if(ev.button===0 && controls.isLocked && swordCooldown<=0){
+      swordCooldown=0.4;
+      swingSword();
     }
   });
 
-  // Movement keys
-  document.addEventListener('keydown', (e) => {
-    switch(e.code){
-      case 'KeyW': move.forward = true; break;
-      case 'KeyS': move.backward = true; break;
-      case 'KeyA': move.left = true; break;
-      case 'KeyD': move.right = true; break;
-    }
+  document.addEventListener('keydown',e=>{
+    if(e.code==='KeyW') move.forward=true;
+    if(e.code==='KeyS') move.backward=true;
+    if(e.code==='KeyA') move.left=true;
+    if(e.code==='KeyD') move.right=true;
   });
-  document.addEventListener('keyup', (e) => {
-    switch(e.code){
-      case 'KeyW': move.forward = false; break;
-      case 'KeyS': move.backward = false; break;
-      case 'KeyA': move.left = false; break;
-      case 'KeyD': move.right = false; break;
-    }
+  document.addEventListener('keyup',e=>{
+    if(e.code==='KeyW') move.forward=false;
+    if(e.code==='KeyS') move.backward=false;
+    if(e.code==='KeyA') move.left=false;
+    if(e.code==='KeyD') move.right=false;
   });
 
-  // Mouse look handled by PointerLockControls; keep yaw/pitch for movement
-  controls.addEventListener('lock', () => {
-    document.getElementById('info').style.display = 'none';
-  });
-  controls.addEventListener('unlock', () => {
-    document.getElementById('info').style.display = '';
-  });
-
-  window.addEventListener('resize', onWindowResize);
+  controls.addEventListener('lock',()=>document.getElementById('info').style.display='none');
+  controls.addEventListener('unlock',()=>document.getElementById('info').style.display='');
+  window.addEventListener('resize',()=>onResize());
 }
 
-function attemptSwordHit(){
-  // raycast from camera forward a short distance to detect monsters
-  const raycaster = new THREE.Raycaster();
-  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  raycaster.set(camera.position, dir);
-  const hits = raycaster.intersectObjects(monsters.map(m=>m.mesh), true);
-  if(hits.length){
-    const first = hits[0];
-    // if within range (2.5 units)
-    if (first.distance < 3.0) {
-      // find monster object
-      const mobj = monsters.find(m=>m.mesh === first.object);
-      if (mobj) {
-        mobj.hp -= 1;
-        // small visual reaction: scale down briefly
-        mobj.mesh.scale.set(0.9,0.9,0.9);
-        setTimeout(()=> mobj.mesh.scale.set(1,1,1), 120);
-        if (mobj.hp <= 0) {
-          // remove from scene and array
-          scene.remove(mobj.mesh);
-          const idx = monsters.indexOf(mobj);
-          if (idx !== -1) monsters.splice(idx,1);
-        }
+function swingSword(){
+  const ray=new THREE.Raycaster();
+  const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  ray.set(camera.position,dir);
+  const hits=ray.intersectObjects(monsters.map(m=>m.mesh));
+  if(hits.length>0 && hits[0].distance<3){
+    const hitMonster=monsters.find(m=>m.mesh===hits[0].object);
+    if(hitMonster){
+      hitMonster.hp--;
+      if(hitMonster.hp<=0){
+        scene.remove(hitMonster.mesh);
+        monsters.splice(monsters.indexOf(hitMonster),1);
       }
     }
   }
 }
 
-function onWindowResize(){
-  camera.aspect = innerWidth/innerHeight;
+function onResize(){
+  camera.aspect=innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth,innerHeight);
 }
 
-let lastTime = performance.now();
-function animate(now = performance.now()){
+let prev=performance.now();
+function animate(now=performance.now()){
   requestAnimationFrame(animate);
-  const dt = (now - lastTime) / 1000; // seconds
-  lastTime = now;
+  const dt=(now-prev)/1000; prev=now;
+  if(swordCooldown>0)swordCooldown=Math.max(0,swordCooldown-dt);
 
-  // update sword cooldown
-  if (swordCooldown > 0) swordCooldown = Math.max(0, swordCooldown - dt);
-
-  // movement when pointer is locked
-  if (controls.isLocked){
-    // movement velocity damping
-    velocity.x -= velocity.x * 10.0 * dt;
-    velocity.z -= velocity.z * 10.0 * dt;
-
-    // get current forward/right vectors from camera yaw
-    const quat = camera.quaternion;
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quat).setY(0).normalize();
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quat).setY(0).normalize();
-
-    const moveVec = new THREE.Vector3();
-    if (move.forward) moveVec.add(forward);
-    if (move.backward) moveVec.sub(forward);
-    if (move.left) moveVec.sub(right);
-    if (move.right) moveVec.add(right);
+  if(controls.isLocked){
+    const speed=6;
+    const forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const moveVec=new THREE.Vector3();
+    if(move.forward)moveVec.add(forward);
+    if(move.backward)moveVec.sub(forward);
+    if(move.left)moveVec.sub(right);
+    if(move.right)moveVec.add(right);
     moveVec.normalize();
+    camera.position.addScaledVector(moveVec,speed*dt);
 
-    const speed = 5.0; // units per second
-    camera.position.addScaledVector(moveVec, speed * dt);
-
-    // simple collision with walls: if camera inside a wall bounding box, push out
-    for (const w of walls){
-      const dx = camera.position.x - w.position.x;
-      const dz = camera.position.z - w.position.z;
-      const overlap = 2.0; // approximate radius
-      if (Math.abs(dx) < 2 + overlap && Math.abs(dz) < 2 + overlap){
-        // push camera out along larger axis
-        if (Math.abs(dx) > Math.abs(dz)) {
-          camera.position.x += (dx > 0 ? 1 : -1) * 0.15;
-        } else {
-          camera.position.z += (dz > 0 ? 1 : -1) * 0.15;
-        }
-      }
-    }
-
-    // monsters AI: move toward player, attack on touch
-    for (const m of monsters){
-      const dir = new THREE.Vector3().subVectors(camera.position, m.mesh.position);
-      dir.y = 0;
-      const dist = dir.length();
-      if (dist > 0.001){
+    // Monster behavior
+    for(const m of monsters){
+      const dir=new THREE.Vector3().subVectors(camera.position,m.mesh.position);
+      dir.y=0;
+      const dist=dir.length();
+      if(dist>0.001){
         dir.normalize();
-        m.mesh.position.addScaledVector(dir, m.speed);
+        m.mesh.position.addScaledVector(dir,m.speed);
       }
-      // if too close, damage player with cooldown
-      if (dist < 2.2){
-        if (m.attackCooldown <= 0){
-          playerHealth -= 10;
-          m.attackCooldown = 1.0; // 1 second between attacks
-          updateHealthHud();
-          // flash monster or give reaction
-          m.mesh.material.color.setHex(0xffaa88);
-          setTimeout(()=> m.mesh.material.color.setHex(0xff4444), 150);
-        }
+      if(dist<2 && m.attackCooldown<=0){
+        playerHealth-=10;
+        m.attackCooldown=1;
+        updateHealth();
       }
-      // decrease attack cooldown
-      m.attackCooldown = Math.max(0, m.attackCooldown - dt);
+      m.attackCooldown=Math.max(0,m.attackCooldown-dt);
     }
 
-    // If player health reaches zero, show message and reset
-    if (playerHealth <= 0){
-      alert('You died — refreshing the level.');
-      window.location.reload();
+    if(playerHealth<=0){
+      alert('You died! Reloading...');
+      location.reload();
       return;
     }
   }
 
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 
-function updateHealthHud(){
-  const pct = Math.max(0, Math.min(100, playerHealth));
-  HEALTH_FILL.style.width = pct + '%';
-  if (pct > 60) HEALTH_FILL.style.background = '#3c9';
-  else if (pct > 30) HEALTH_FILL.style.background = '#fc3';
-  else HEALTH_FILL.style.background = '#c33';
+function updateHealth(){
+  const pct=Math.max(0,Math.min(100,playerHealth));
+  HEALTH_FILL.style.width=pct+'%';
+  HEALTH_FILL.style.background=pct>60?'#3c9':pct>30?'#fc3':'#c33';
 }
-
-// initial HUD update
-updateHealthHud();
+updateHealth();
 
 </script>
 </body>
