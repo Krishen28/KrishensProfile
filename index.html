@@ -3,24 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>FPS Maze — Fixed for GitHub Pages</title>
+<title>3D Maze Game — GitHub Pages Safe</title>
 <style>
-  html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:sans-serif}
-  #hud{position:absolute;left:10px;top:10px;color:white;z-index:10}
-  #info{position:absolute;top:10px;left:50%;transform:translateX(-50%);color:white;z-index:10}
-  #healthBar{width:200px;height:18px;background:#333;border-radius:6px;overflow:hidden}
-  #healthFill{height:100%;background:#c33;width:100%}
-  canvas{display:block}
+  html,body {margin:0;height:100%;overflow:hidden;background:black;font-family:sans-serif}
+  #info {
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    color:white;font-size:16px;z-index:10;text-align:center;
+  }
+  #hud {
+    position:absolute;left:10px;top:10px;z-index:10;color:white;
+  }
+  #healthBar {width:200px;height:18px;background:#333;border-radius:6px;overflow:hidden}
+  #healthFill {height:100%;background:#3c9;width:100%}
 </style>
 </head>
 <body>
-<div id="info">Click to lock mouse → Move: W A S D | Attack: Left Click</div>
+<div id="info">Click to lock mouse — Move: W A S D | Attack: Left Click</div>
 <div id="hud">
   <div>Health</div>
   <div id="healthBar"><div id="healthFill"></div></div>
 </div>
 
-<!-- ✅ Load three.js and controls as global scripts -->
+<!-- ✅ Load Three.js + PointerLockControls as GLOBAL scripts -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 
@@ -28,10 +32,8 @@
 let camera, scene, renderer, controls;
 const move = { forward:false, backward:false, left:false, right:false };
 const monsters = [];
-const walls = [];
 let swordCooldown = 0;
 let playerHealth = 100;
-
 const HEALTH_FILL = document.getElementById('healthFill');
 
 init();
@@ -41,155 +43,145 @@ function init(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
 
-  camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000);
-  camera.position.set(0, 2, 10);
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0,2,5);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.8));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-  dir.position.set(5, 10, 7);
-  scene.add(dir);
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(5,10,7);
+  scene.add(hemiLight, dirLight);
 
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(300, 300),
-    new THREE.MeshPhongMaterial({ color: 0x8fbf8f })
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(500,500),
+    new THREE.MeshPhongMaterial({color:0x8fbf8f})
   );
-  floor.rotation.x = -Math.PI/2;
-  scene.add(floor);
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
 
-  const wallGeo = new THREE.BoxGeometry(4, 4, 4);
-  const wallMat = new THREE.MeshPhongMaterial({ color: 0x556b2f });
-  for(let x=-48;x<=48;x+=4){
-    for(let z=-48;z<=48;z+=4){
-      if(x===-48||x===48||z===-48||z===48||Math.random()<0.07){
-        const w=new THREE.Mesh(wallGeo,wallMat);
-        w.position.set(x,2,z);
-        scene.add(w);
-        walls.push(w);
-      }
-    }
+  const wallGeo = new THREE.BoxGeometry(4,4,4);
+  const wallMat = new THREE.MeshPhongMaterial({color:0x556b2f});
+  for(let i=0;i<80;i++){
+    const w = new THREE.Mesh(wallGeo, wallMat);
+    w.position.set((Math.random()-0.5)*200, 2, (Math.random()-0.5)*200);
+    scene.add(w);
   }
 
-  const mGeo=new THREE.BoxGeometry(2,2,2);
-  const mMat=new THREE.MeshPhongMaterial({color:0xff4444});
-  for(let i=0;i<6;i++){
-    const m=new THREE.Mesh(mGeo,mMat);
-    m.position.set((Math.random()*80)-40,1,(Math.random()*80)-40);
+  // Monster cubes
+  const mGeo = new THREE.BoxGeometry(2,2,2);
+  const mMat = new THREE.MeshPhongMaterial({color:0xff4444});
+  for(let i=0;i<5;i++){
+    const m = new THREE.Mesh(mGeo, mMat);
+    m.position.set(Math.random()*80-40,1,Math.random()*80-40);
     scene.add(m);
-    monsters.push({mesh:m,hp:3,speed:0.05,attackCooldown:0});
+    monsters.push({mesh:m,hp:3});
   }
 
-  const swordGeo=new THREE.BoxGeometry(0.15,1.25,0.15);
-  const swordMat=new THREE.MeshPhongMaterial({color:0xccaa33});
-  const sword=new THREE.Mesh(swordGeo,swordMat);
+  // Sword
+  const swordGeo = new THREE.BoxGeometry(0.15,1.25,0.15);
+  const swordMat = new THREE.MeshPhongMaterial({color:0xccaa33});
+  const sword = new THREE.Mesh(swordGeo,swordMat);
   sword.position.set(0.5,-0.7,-1.5);
   camera.add(sword);
   scene.add(camera);
 
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(innerWidth,innerHeight);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  controls=new THREE.PointerLockControls(camera,document.body);
-  document.addEventListener('click',()=>{ if(!controls.isLocked) controls.lock(); });
+  // Pointer lock setup
+  controls = new THREE.PointerLockControls(camera, document.body);
+  document.body.addEventListener('click', () => controls.lock());
+  controls.addEventListener('lock', ()=> document.getElementById('info').style.display='none');
+  controls.addEventListener('unlock', ()=> document.getElementById('info').style.display='');
 
-  window.addEventListener('pointerdown',ev=>{
-    if(ev.button===0 && controls.isLocked && swordCooldown<=0){
-      swordCooldown=0.4;
-      swingSword();
-    }
-  });
-
-  document.addEventListener('keydown',e=>{
+  // Movement keys
+  document.addEventListener('keydown', e=>{
     if(e.code==='KeyW') move.forward=true;
     if(e.code==='KeyS') move.backward=true;
     if(e.code==='KeyA') move.left=true;
     if(e.code==='KeyD') move.right=true;
   });
-  document.addEventListener('keyup',e=>{
+  document.addEventListener('keyup', e=>{
     if(e.code==='KeyW') move.forward=false;
     if(e.code==='KeyS') move.backward=false;
     if(e.code==='KeyA') move.left=false;
     if(e.code==='KeyD') move.right=false;
   });
 
-  controls.addEventListener('lock',()=>document.getElementById('info').style.display='none');
-  controls.addEventListener('unlock',()=>document.getElementById('info').style.display='');
-  window.addEventListener('resize',onResize);
+  // Sword swing
+  document.addEventListener('mousedown', e=>{
+    if(e.button===0 && controls.isLocked && swordCooldown<=0){
+      swordCooldown=0.4;
+      attackMonster();
+    }
+  });
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 }
 
-function swingSword(){
-  const ray=new THREE.Raycaster();
-  const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-  ray.set(camera.position,dir);
-  const hits=ray.intersectObjects(monsters.map(m=>m.mesh));
-  if(hits.length>0 && hits[0].distance<3){
-    const hitMonster=monsters.find(m=>m.mesh===hits[0].object);
-    if(hitMonster){
-      hitMonster.hp--;
-      if(hitMonster.hp<=0){
-        scene.remove(hitMonster.mesh);
-        monsters.splice(monsters.indexOf(hitMonster),1);
+function attackMonster(){
+  const ray = new THREE.Raycaster();
+  const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  ray.set(camera.position, dir);
+  const hits = ray.intersectObjects(monsters.map(m=>m.mesh));
+  if(hits.length && hits[0].distance<3){
+    const target = monsters.find(m=>m.mesh===hits[0].object);
+    if(target){
+      target.hp--;
+      if(target.hp<=0){
+        scene.remove(target.mesh);
+        monsters.splice(monsters.indexOf(target),1);
       }
     }
   }
 }
 
-function onResize(){
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-}
-
-let prev=performance.now();
-function animate(now=performance.now()){
+function animate(){
   requestAnimationFrame(animate);
-  const dt=(now-prev)/1000; prev=now;
-  if(swordCooldown>0)swordCooldown=Math.max(0,swordCooldown-dt);
-
+  const dt = 0.05;
   if(controls.isLocked){
-    const speed=6;
-    const forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).setY(0).normalize();
-    const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion).setY(0).normalize();
-    const moveVec=new THREE.Vector3();
-    if(move.forward)moveVec.add(forward);
-    if(move.backward)moveVec.sub(forward);
-    if(move.left)moveVec.sub(right);
-    if(move.right)moveVec.add(right);
+    const speed = 8;
+    const forward = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion).setY(0).normalize();
+    const moveVec = new THREE.Vector3();
+    if(move.forward) moveVec.add(forward);
+    if(move.backward) moveVec.sub(forward);
+    if(move.left) moveVec.sub(right);
+    if(move.right) moveVec.add(right);
     moveVec.normalize();
-    camera.position.addScaledVector(moveVec,speed*dt);
+    camera.position.addScaledVector(moveVec, speed * dt);
 
     for(const m of monsters){
-      const dir=new THREE.Vector3().subVectors(camera.position,m.mesh.position);
+      const dir = new THREE.Vector3().subVectors(camera.position, m.mesh.position);
       dir.y=0;
-      const dist=dir.length();
-      if(dist>0.001){
+      const dist = dir.length();
+      if(dist>0.01){
         dir.normalize();
-        m.mesh.position.addScaledVector(dir,m.speed);
+        m.mesh.position.addScaledVector(dir, 0.08);
       }
-      if(dist<2 && m.attackCooldown<=0){
-        playerHealth-=10;
-        m.attackCooldown=1;
+      if(dist<2){
+        playerHealth -= 10*dt;
         updateHealth();
       }
-      m.attackCooldown=Math.max(0,m.attackCooldown-dt);
-    }
-
-    if(playerHealth<=0){
-      alert('You died! Reloading...');
-      location.reload();
-      return;
     }
   }
-
-  renderer.render(scene,camera);
+  renderer.render(scene, camera);
 }
 
 function updateHealth(){
-  const pct=Math.max(0,Math.min(100,playerHealth));
-  HEALTH_FILL.style.width=pct+'%';
-  HEALTH_FILL.style.background=pct>60?'#3c9':pct>30?'#fc3':'#c33';
+  playerHealth = Math.max(0, playerHealth);
+  const pct = playerHealth;
+  HEALTH_FILL.style.width = pct + "%";
+  HEALTH_FILL.style.background = pct>60?"#3c9":pct>30?"#fc3":"#c33";
+  if(pct<=0){
+    alert("You died! Reloading...");
+    location.reload();
+  }
 }
-updateHealth();
 </script>
 </body>
 </html>
