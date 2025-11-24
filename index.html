@@ -3,645 +3,667 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Instant Load Maze — No Pointer Lock</title>
+<title>Block Maze — Combined Game (Full)</title>
 <style>
-  html,body { height:100%; margin:0; background:#05060a; color:#fff; font-family:system-ui,Segoe UI,Roboto,Arial; overflow:hidden; }
-  #hud { position: absolute; left: 12px; top: 12px; z-index: 10; background: rgba(0,0,0,0.35); padding: 10px 12px; border-radius: 8px; }
-  #hud small { display:block; color:#ddd; font-size:12px; opacity:0.9; }
-  #fps { position:absolute; right:12px; top:12px; z-index:10; background:rgba(0,0,0,0.35); padding:8px 10px; border-radius:8px; }
-  #message { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:20; background:rgba(0,0,0,0.6); padding:14px 18px; border-radius:10px; display:none; }
-  canvas { display:block; } /* three will insert canvas */
-  #crosshair { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.9); z-index:5; pointer-events:none; box-shadow:0 0 8px rgba(255,255,255,0.7); }
+  html,body{height:100%;margin:0;background:#050508;color:#fff;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;overflow:hidden;}
+  #overlay{position:absolute;left:10px;top:10px;z-index:10;background:rgba(0,0,0,0.35);padding:8px 10px;border-radius:8px;}
+  #hud{position:absolute;right:10px;top:10px;z-index:10;text-align:right;background:rgba(0,0,0,0.35);padding:8px 10px;border-radius:8px;}
+  #message{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;padding:14px 22px;border-radius:12px;background:rgba(0,0,0,0.6);display:none;}
+  #canvas-container{width:100%;height:100%;}
+  .small{font-size:12px;color:#ddd;opacity:0.95;margin-top:6px;}
+  #fps{font-size:12px;color:#bfefff;}
 </style>
 </head>
 <body>
+<div id="overlay">
+  <div style="font-weight:700;font-size:16px;">Block Maze — Combined</div>
+  <div class="small">W A S D — Move • Mouse — Look • Click — Swing</div>
+  <div class="small">Tip: click canvas to lock pointer. Press Esc to release.</div>
+</div>
 <div id="hud">
   <div id="health">Health: 100</div>
-  <small>W A S D = move · Mouse = look · Click = swing</small>
+  <div id="monsters">Monsters: 0</div>
+  <div id="fps">FPS: 0</div>
 </div>
-<div id="fps">FPS: 0</div>
 <div id="message"></div>
-<div id="crosshair"></div>
+<div id="canvas-container"></div>
 
-<!-- only external lib -->
 <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-
 <script>
-/* Instant-load single-file maze game (no pointer lock) */
+/* Combined single-file game (class-based + long maze + sword + AI)
+   - Procedural maze (recursive backtracker)
+   - Player/Monster/Sword classes
+   - Pointer lock FPS controls (optional)
+   - Collision detection, sword swing, trail, particles
+   - Simple WebAudio sounds
+*/
 
-// CONFIG
-const CONFIG = {
-  mazeW: 21,
-  mazeH: 21,
-  cell: 2.2,
-  playerHeight: 1.6,
-  playerSpeed: 3.0,
-  monsterCount: 6,
-  monSpeed: 0.9,
-  swordRange: 2.0,
-  swingCooldown: 0.6,
-  trailLength: 10
-};
+(() => {
+  // ===== CONFIG =====
+  const CELL = 2.0;
+  const MAZE_W = 21;
+  const MAZE_H = 21;
+  const PLAYER_HEIGHT = 1.6;
+  const PLAYER_SPEED = 3.2; // units / second
+  const MONSTER_COUNT = 8;
+  const MONSTER_SPEED = 1.0;
+  const SWING_COOLDOWN = 0.6;
+  const TRAIL_LENGTH = 14;
 
-// STATE
-let yaw = 0, pitch = 0;
-const input = { forward:false, back:false, left:false, right:false };
-let lastMouse = {x: window.innerWidth/2, y: window.innerHeight/2};
-let mouseInitialized = false;
-let audioCtx = null; // created on first interaction (browser policy)
-let scene, camera, renderer, clock;
-let maze, walls = [], monsters = [], particles = [];
-let player, sword;
-let fpsElem = document.getElementById('fps');
-let healthElem = document.getElementById('health');
-let msgElem = document.getElementById('message');
-let frames = 0, accum = 0;
+  // ===== DOM =====
+  const container = document.getElementById('canvas-container');
+  const hudHealth = document.getElementById('health');
+  const hudMonsters = document.getElementById('monsters');
+  const hudFPS = document.getElementById('fps');
+  const messageBox = document.getElementById('message');
 
-// UTIL: quick texture generation (fast)
-function makeCanvasTexture(drawFn, size=256, repeat=4) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const ctx = c.getContext('2d');
-  drawFn(ctx, size);
-  const tx = new THREE.CanvasTexture(c);
-  tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
-  tx.repeat.set(repeat, repeat);
-  tx.anisotropy = 1;
-  return tx;
-}
+  // ===== GLOBALS =====
+  let yaw = 0, pitch = 0; // mouse look
+  const input = { forward:false, back:false, left:false, right:false };
+  let pointerLocked = false;
 
-// simple wall texture
-const wallTexture = makeCanvasTexture((ctx,size)=>{
-  ctx.fillStyle='#3a3640'; ctx.fillRect(0,0,size,size);
-  ctx.fillStyle='#2b2730';
-  for(let y=0;y<size;y+=20){
-    for(let x=0;x<size;x+=36){
-      ctx.fillRect(x+((y/20)%2?6:0), y, 30, 18);
-      ctx.fillStyle = 'rgba(0,0,0,0.1)';
-      ctx.fillRect(x+((y/20)%2?6:0), y, 30, 18);
-      ctx.fillStyle = '#2b2730';
-    }
-  }
-}, 256, 2);
+  // ===== THREE SETUP =====
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1220);
+  scene.fog = new THREE.FogExp2(0x0b1220, 0.035);
 
-// floor texture
-const floorTexture = makeCanvasTexture((ctx,size)=>{
-  ctx.fillStyle='#15151a'; ctx.fillRect(0,0,size,size);
-  ctx.fillStyle='#1b1a20';
-  for(let y=0;y<size;y+=30){
-    for(let x=0;x<size;x+=30){
-      ctx.fillRect(x+2,y+2,26,26);
-      if(Math.random()<0.15){
-        ctx.fillStyle='rgba(255,255,255,0.02)';
-        ctx.fillRect(x+4,y+4,6,6);
-        ctx.fillStyle='#1b1a20';
-      }
-    }
-  }
-},256,10);
+  const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(CELL, PLAYER_HEIGHT, CELL);
 
-// INITIALIZE
-function init(){
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0d12);
-  scene.fog = new THREE.FogExp2(0x0b0d12, 0.02);
-
-  camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
-  camera.position.set(0, CONFIG.playerHeight, 0);
-
-  renderer = new THREE.WebGLRenderer({ antialias:true });
+  const renderer = new THREE.WebGLRenderer({ antialias:true });
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
-  document.body.appendChild(renderer.domElement);
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(renderer.domElement);
 
-  clock = new THREE.Clock();
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
 
-  // lighting
-  const ambient = new THREE.AmbientLight(0xffffff, 0.22);
-  scene.add(ambient);
-  const sun = new THREE.DirectionalLight(0xfff7e8, 0.9);
-  sun.position.set(20, 40, 10);
+  const clock = new THREE.Clock();
+
+  // ===== TEXTURES =====
+  const loader = new THREE.TextureLoader();
+  const floorTex = loader.load('https://i.imgur.com/yY6tjqm.jpeg'); // floor
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+  floorTex.repeat.set(20,20);
+
+  const wallTex = loader.load('https://i.imgur.com/Jd2NPFf.jpeg'); // wall
+  wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+
+  const monsterTex = loader.load('https://i.imgur.com/8d5VGwN.jpeg');
+
+  // ===== LIGHTS =====
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x222233, 0.6);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff7ec, 0.9);
+  sun.position.set(20, 50, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024,1024);
+  sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
+  sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -50;
   scene.add(sun);
 
-  // floor
-  const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness:0.95 });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(400,400), floorMat);
+  // ===== FLOOR =====
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(CELL * MAZE_W * 2, CELL * MAZE_H * 2),
+    new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.95 })
+  );
   floor.rotation.x = -Math.PI/2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // sky-ish hemisphere light
-  const hemi = new THREE.HemisphereLight(0x606a8f, 0x20222a, 0.12);
-  scene.add(hemi);
+  // ===== WORLD STORAGE =====
+  let walls = [];    // {mesh, x, z}
+  let monsters = []; // Monster instances
+  let particles = []; // particle Points
 
-  // maze + walls
-  maze = new MazeGenerator(CONFIG.mazeW, CONFIG.mazeH);
+  // ===== MAZE (recursive backtracker) =====
+  class Maze {
+    constructor(w,h){
+      this.w = (w % 2 === 0) ? w+1 : w;
+      this.h = (h % 2 === 0) ? h+1 : h;
+      this.grid = [];
+      for(let z=0; z<this.h; z++){
+        this.grid[z] = [];
+        for(let x=0; x<this.w; x++){
+          this.grid[z][x] = '#';
+        }
+      }
+    }
+    generate(){
+      const w = this.w, h = this.h;
+      const stack = [];
+      const startX = 1, startZ = 1;
+      this.grid[startZ][startX] = '.';
+      stack.push({x:startX,z:startZ});
+      const dirs = [{x:0,z:-2},{x:2,z:0},{x:0,z:2},{x:-2,z:0}];
+      while(stack.length){
+        const cur = stack[stack.length-1];
+        const neighbors = [];
+        for(const d of dirs){
+          const nx = cur.x + d.x;
+          const nz = cur.z + d.z;
+          if(nx>0 && nz>0 && nx<w-1 && nz<h-1 && this.grid[nz][nx] === '#'){
+            neighbors.push({x:nx,z:nz,dir:d});
+          }
+        }
+        if(neighbors.length === 0) {
+          stack.pop();
+        } else {
+          const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
+          const betweenX = cur.x + pick.dir.x/2;
+          const betweenZ = cur.z + pick.dir.z/2;
+          this.grid[betweenZ][betweenX] = '.';
+          this.grid[pick.z][pick.x] = '.';
+          stack.push({x:pick.x,z:pick.z});
+        }
+      }
+      // entrance/exit
+      this.grid[1][0] = '.';
+      this.grid[this.h-2][this.w-1] = '.';
+    }
+    buildMeshes() {
+      walls.forEach(w => scene.remove(w.mesh));
+      walls = [];
+      const wallGeom = new THREE.BoxGeometry(CELL, CELL*1.1, CELL);
+      const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness:0.92, metalness:0.02 });
+      const offsetX = - (this.w * CELL)/2 + CELL/2;
+      const offsetZ = - (this.h * CELL)/2 + CELL/2;
+      for(let z=0; z<this.h; z++){
+        for(let x=0; x<this.w; x++){
+          if(this.grid[z][x] === '#'){
+            const mesh = new THREE.Mesh(wallGeom, wallMat);
+            mesh.position.set(offsetX + x*CELL, CELL*0.55, offsetZ + z*CELL);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            walls.push({mesh, x, z});
+          }
+        }
+      }
+      return {offsetX, offsetZ};
+    }
+  }
+
+  const maze = new Maze(MAZE_W, MAZE_H);
   maze.generate();
-  const offsets = maze.build(scene);
+  const offsets = maze.buildMeshes();
 
-  // create player at start cell
-  player = new Player(camera);
-  player.setPosition(offsets.x + CONFIG.cell, offsets.z + CONFIG.cell);
-
-  // sword
-  sword = new Sword(player);
-
-  // spawn monsters
-  for(let i=0;i<CONFIG.monsterCount;i++){
-    const pos = maze.randomFreeCellWorld(offsets);
-    const m = new Monster(pos.x, pos.z);
-    monsters.push(m);
-  }
-  updateHUD();
-
-  // mouse & keyboard
-  window.addEventListener('keydown', onKeyDown);
-  window.addEventListener('keyup', onKeyUp);
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('resize', onResize);
-
-  // very small intro message
-  showTemporaryMessage('Loaded — play immediately (no click needed)', 2000);
-  animate();
-}
-
-// Maze generator (recursive backtracker)
-class MazeGenerator {
-  constructor(w,h){
-    this.w = w % 2 === 0 ? w+1 : w;
-    this.h = h % 2 === 0 ? h+1 : h;
-    this.grid = Array(this.h).fill().map(()=>Array(this.w).fill('#'));
-  }
-  generate(){
-    const w=this.w,h=this.h;
-    const stack=[{x:1,z:1}];
-    this.grid[1][1]='.';
-    const dirs=[{x:0,z:-2},{x:2,z:0},{x:0,z:2},{x:-2,z:0}];
-    while(stack.length){
-      const cur = stack[stack.length-1];
-      const neighbors = [];
-      for(const d of dirs){
-        const nx=cur.x+d.x, nz=cur.z+d.z;
-        if(nx>0 && nz>0 && nx<w-1 && nz<h-1 && this.grid[nz][nx]==='#'){
-          neighbors.push({x:nx,z:nz,dir:d});
+  // ===== PLAYER CLASS =====
+  class Player {
+    constructor(camera){
+      this.camera = camera;
+      this.pos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z);
+      this.health = 100;
+      this.speed = PLAYER_SPEED;
+      this.radius = 0.35;
+      this.walkTimer = 0;
+      this.canMove = true;
+      this.shake = {intensity:0, duration:0};
+    }
+    setPosition(x,z){
+      this.pos.x = x; this.pos.z = z;
+      this.camera.position.x = x;
+      this.camera.position.z = z;
+      this.camera.position.y = PLAYER_HEIGHT;
+    }
+    applyShake(dt){
+      if(this.shake.duration > 0){
+        this.shake.duration -= dt;
+        const s = this.shake.intensity * (this.shake.duration / 0.25);
+        camera.position.x += (Math.random()*2-1) * s;
+        camera.position.y += (Math.random()*2-1) * s * 0.5;
+        camera.position.z += (Math.random()*2-1) * s;
+      }
+    }
+    update(dt, input){
+      if(!this.canMove) return;
+      const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+      const right = new THREE.Vector3(Math.sin(yaw+Math.PI/2),0,Math.cos(yaw+Math.PI/2));
+      let move = new THREE.Vector3();
+      if(input.forward) move.addScaledVector(forward, 1);
+      if(input.back) move.addScaledVector(forward, -1);
+      if(input.left) move.addScaledVector(right, -1);
+      if(input.right) move.addScaledVector(right, 1);
+      if(move.length() > 0.001){
+        move.normalize();
+        const wanted = this.pos.clone().addScaledVector(move, this.speed * dt);
+        if(!checkCollisionCircle(wanted.x, wanted.z, this.radius)) {
+          this.setPosition(wanted.x, wanted.z);
+          this.walkTimer += dt;
+          if(this.walkTimer > 0.28){ this.walkTimer = 0; playFootstep(); }
         }
       }
-      if(!neighbors.length) stack.pop();
-      else {
-        const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
-        this.grid[cur.z + pick.dir.z/2][cur.x + pick.dir.x/2] = '.';
-        this.grid[pick.z][pick.x] = '.';
-        stack.push({x:pick.x,z:pick.z});
+      this.applyShake(dt);
+    }
+    damage(amount){
+      this.health = Math.max(0, this.health - amount);
+      hudHealth.innerText = `Health: ${this.health}`;
+      this.shake.intensity = 0.12; this.shake.duration = 0.25;
+      if(this.health <= 0){
+        showMessage("You died! Press R to restart.");
+        this.canMove = false;
       }
     }
-    // ensure openings
-    this.grid[1][0]='.';
-    this.grid[this.h-2][this.w-1]='.';
   }
-  build(scene){
-    // remove previous walls
-    walls.forEach(w=>scene.remove(w.mesh));
-    walls = [];
-    const offsetX = - (this.w * CONFIG.cell)/2 + CONFIG.cell/2;
-    const offsetZ = - (this.h * CONFIG.cell)/2 + CONFIG.cell/2;
-    const geom = new THREE.BoxGeometry(CONFIG.cell*0.96, CONFIG.cell*1.1, CONFIG.cell*0.96);
-    for(let z=0; z<this.h; z++){
-      for(let x=0; x<this.w; x++){
-        if(this.grid[z][x] === '#'){
-          const mat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness:0.95 });
-          const mesh = new THREE.Mesh(geom, mat);
-          const h = (1.1 + Math.random()*0.35);
-          mesh.scale.y = h;
-          mesh.position.set(offsetX + x*CONFIG.cell, (CONFIG.cell*1.1*h)/2 - (CONFIG.cell*0.1), offsetZ + z*CONFIG.cell);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          scene.add(mesh);
-          walls.push({mesh, x, z});
+
+  // ===== SWORD CLASS =====
+  class Sword {
+    constructor(player){
+      this.player = player;
+      const bladeGeo = new THREE.BoxGeometry(0.08, 1.0, 0.12);
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness:0.8, roughness:0.2 });
+      this.blade = new THREE.Mesh(bladeGeo, bladeMat);
+      this.blade.castShadow = true;
+      this.blade.position.set(0.4, -0.6, -1.0);
+      this.blade.rotation.x = -0.25;
+      const handleGeo = new THREE.BoxGeometry(0.12, 0.25, 0.12);
+      const handleMat = new THREE.MeshStandardMaterial({ color: 0x553300, roughness:0.8 });
+      this.handle = new THREE.Mesh(handleGeo, handleMat);
+      this.handle.position.set(0.4, -1.05, -1.0);
+      this.group = new THREE.Group();
+      this.group.add(this.blade);
+      this.group.add(this.handle);
+      camera.add(this.group);
+      this.group.position.set(0,0,0);
+      this.swinging = false;
+      this.timer = 0;
+      this.cooldown = 0;
+      this.trailPositions = [];
+      this.trailGeo = new THREE.BufferGeometry();
+      const pts = new Float32Array(TRAIL_LENGTH * 3);
+      this.trailGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+      const trailMat = new THREE.LineBasicMaterial({ color:0xffd080, transparent:true, opacity:0.9 });
+      this.trail = new THREE.Line(this.trailGeo, trailMat);
+      scene.add(this.trail);
+      this._didHit = false;
+    }
+    update(dt){
+      if(this.cooldown > 0) this.cooldown = Math.max(0, this.cooldown - dt);
+      if(this.swinging) {
+        this.timer += dt * 6;
+        const progress = this.timer;
+        const angle = Math.sin(progress) * Math.PI * 0.7;
+        this.group.rotation.set(angle - 0.7, 0.0, 0.0);
+        const worldPos = new THREE.Vector3();
+        this.blade.getWorldPosition(worldPos);
+        this.trailPositions.unshift(worldPos.clone());
+        if(this.trailPositions.length > TRAIL_LENGTH) this.trailPositions.pop();
+        this.updateTrailGeometry();
+        if(progress > Math.PI * 0.28 && progress < Math.PI * 0.55 && !this._didHit) {
+          this._didHit = true;
+          this.tryHitMonsters(worldPos);
+        }
+        if(this.timer > Math.PI) {
+          this.swinging = false;
+          this._didHit = false;
+          this.timer = 0;
+          this.cooldown = SWING_COOLDOWN;
+        }
+      } else {
+        this.group.rotation.x = -0.3 + Math.sin(performance.now() * 0.002) * 0.02;
+        if(this.trailPositions.length > 0) {
+          this.trailPositions.shift();
+          this.updateTrailGeometry();
         }
       }
     }
-    return {x: offsetX, z: offsetZ};
-  }
-  // pick free '.' cell and return world coords based on offsets
-  randomFreeCellWorld(offsets){
-    while(true){
-      const x = Math.floor(Math.random() * (this.w - 2)) + 1;
-      const z = Math.floor(Math.random() * (this.h - 2)) + 1;
-      if(this.grid[z][x] === '.'){
-        const wx = offsets.x + x*CONFIG.cell;
-        const wz = offsets.z + z*CONFIG.cell;
-        return {x:wx, z:wz};
+    startSwing() {
+      if(this.cooldown > 0) return false;
+      this.swinging = true;
+      this.timer = 0.01;
+      this._didHit = false;
+      playSwing();
+      return true;
+    }
+    updateTrailGeometry(){
+      const pts = this.trailGeo.attributes.position.array;
+      for(let i=0;i<TRAIL_LENGTH;i++){
+        const p = this.trailPositions[i];
+        const idx = i*3;
+        if(p){
+          pts[idx] = p.x; pts[idx+1] = p.y; pts[idx+2] = p.z;
+        } else {
+          pts[idx] = pts[idx+1] = pts[idx+2] = 0;
+        }
       }
+      this.trailGeo.attributes.position.needsUpdate = true;
     }
-  }
-}
-
-// Player
-class Player {
-  constructor(camera){
-    this.camera = camera;
-    this.pos = new THREE.Vector3();
-    this.health = 100;
-    this.radius = CONFIG.playerRadius || 0.35;
-    this.speed = CONFIG.playerSpeed || CONFIG.playerSpeed;
-    this.canMove = true;
-  }
-  setPosition(x,z){
-    this.pos.set(x, 0, z);
-    this.camera.position.set(x, CONFIG.playerHeight, z);
-  }
-  update(dt){
-    if(!this.canMove) return;
-    // build forward/right vectors from yaw
-    const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
-    const right = new THREE.Vector3(Math.sin(yaw + Math.PI/2), 0, Math.cos(yaw + Math.PI/2));
-    const move = new THREE.Vector3();
-    if(input.forward) move.addScaledVector(forward, 1);
-    if(input.back) move.addScaledVector(forward, -1);
-    if(input.left) move.addScaledVector(right, -1);
-    if(input.right) move.addScaledVector(right, 1);
-    if(move.lengthSq() > 0.0001){
-      move.normalize();
-      const next = this.pos.clone().addScaledVector(move, this.speed * dt);
-      if(!checkCollisionCircle(next.x, next.z, this.radius)){
-        this.setPosition(next.x, next.z);
-      }
-    }
-    // camera rotation from global yaw/pitch
-    this.camera.rotation.set(pitch, yaw, 0);
-  }
-  damage(amount){
-    this.health = Math.max(0, this.health - amount);
-    healthElem.innerText = `Health: ${this.health}`;
-    showDamageFlash();
-    if(this.health <= 0){
-      showMessage('You died — press R to restart', 0, 'death');
-      // stop movement
-      this.canMove = false;
-    }
-  }
-}
-
-// Sword: attached to camera
-class Sword {
-  constructor(player){
-    this.player = player;
-    this.group = new THREE.Group();
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 0.12), new THREE.MeshStandardMaterial({color:0xdddddd, metalness:0.8, roughness:0.25}));
-    blade.position.set(0.35, -0.6, -1.0);
-    blade.rotation.x = -0.2;
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.28,0.12), new THREE.MeshStandardMaterial({color:0x4a2a12, roughness:0.9}));
-    handle.position.set(0.35, -1.05, -1.0);
-    this.group.add(blade); this.group.add(handle);
-    camera.add(this.group);
-    this.group.position.set(0,0,0);
-    this.swinging = false;
-    this.timer = 0;
-    this.cooldown = 0;
-    this._didHit = false;
-    this.trailPositions = [];
-    this.trailGeo = new THREE.BufferGeometry();
-    this.trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CONFIG.trailLength*3), 3));
-    this.trailMat = new THREE.LineBasicMaterial({ color: 0xffd080, transparent:true, opacity:0.9 });
-    this.trail = new THREE.Line(this.trailGeo, this.trailMat);
-    scene.add(this.trail);
-  }
-  startSwing(){
-    if(this.cooldown > 0) return false;
-    this.swinging = true;
-    this.timer = 0.02;
-    this._didHit = false;
-    playSwingSound();
-    return true;
-  }
-  update(dt){
-    if(this.cooldown > 0) this.cooldown = Math.max(0, this.cooldown - dt);
-    if(this.swinging){
-      this.timer += dt * 6;
-      const pr = this.timer;
-      const angle = Math.sin(pr) * Math.PI * 0.7;
-      this.group.rotation.set(angle - 0.65, 0, 0);
-      const worldPos = new THREE.Vector3();
-      // blade world pos
-      this.group.children[0].getWorldPosition(worldPos);
-      this.trailPositions.unshift(worldPos.clone());
-      if(this.trailPositions.length > CONFIG.trailLength) this.trailPositions.pop();
-      this.updateTrail();
-      // detect hit at peak
-      if(pr > Math.PI*0.28 && pr < Math.PI*0.6 && !this._didHit){
-        this._didHit = true;
-        this.tryHit(worldPos);
-      }
-      if(this.timer > Math.PI){
-        this.swinging = false;
-        this._didHit = false;
-        this.timer = 0;
-        this.cooldown = CONFIG.swingCooldown;
-      }
-    } else {
-      this.group.rotation.x = -0.3 + Math.sin(performance.now() * 0.002) * 0.02;
-      if(this.trailPositions.length) { this.trailPositions.shift(); this.updateTrail(); }
-    }
-    // update cooldown UI
-    const pct = Math.max(0, Math.min(1, 1 - (this.cooldown / CONFIG.swingCooldown)));
-    const bar = document.getElementById('attackCooldownBar');
-    if(bar) bar.style.width = `${pct*100}%`;
-  }
-  updateTrail(){
-    const arr = this.trailGeo.attributes.position.array;
-    for(let i=0;i<CONFIG.trailLength;i++){
-      const p = this.trailPositions[i];
-      const idx = i*3;
-      if(p){ arr[idx]=p.x; arr[idx+1]=p.y; arr[idx+2]=p.z; } else { arr[idx]=arr[idx+1]=arr[idx+2]=0; }
-    }
-    this.trailGeo.attributes.position.needsUpdate = true;
-  }
-  tryHit(worldPos){
-    const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)).normalize();
-    const hitRadius = CONFIG.swordRange;
-    for(let i=monsters.length-1;i>=0;i--){
-      const mon = monsters[i];
-      const toMon = mon.mesh.position.clone().sub(camera.position);
-      const dist = toMon.length();
-      if(dist <= hitRadius){
-        toMon.y = 0; toMon.normalize();
-        const dot = forward.dot(toMon);
-        if(dot > 0.3){
-          mon.hit(1 + Math.floor(Math.random()*2));
-          spawnParticles(mon.mesh.position.x, mon.mesh.position.y + 0.4, mon.mesh.position.z);
-          playHitSound();
-          mon.applyKnockback(toMon.clone().multiplyScalar(-1.0));
-          if(mon.hp <= 0){
-            scene.remove(mon.mesh);
-            monsters.splice(i,1);
-            updateHUD();
+    tryHitMonsters(worldPos) {
+      const hitRadius = 1.6;
+      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).normalize();
+      for(let i = monsters.length - 1; i >=0; i--){
+        const mon = monsters[i];
+        const mpos = mon.mesh.position;
+        const toMonster = mpos.clone().sub(camera.position);
+        const dist = toMonster.length();
+        if(dist <= hitRadius) {
+          toMonster.y = 0;
+          toMonster.normalize();
+          const dot = forward.dot(toMonster);
+          if(dot > 0.3) {
+            mon.hit(1 + Math.floor(Math.random()*3));
+            playHit();
+            spawnHitParticles(mpos.x, mpos.y + 0.5, mpos.z);
+            const kb = toMonster.clone().multiplyScalar(-0.8);
+            mon.applyKnockback(kb);
+            if(mon.hp <= 0){
+              scene.remove(mon.mesh);
+              monsters.splice(i,1);
+              hudMonsters.innerText = `Monsters: ${monsters.length}`;
+            }
           }
         }
       }
     }
   }
-}
 
-// Monster
-class Monster {
-  constructor(wx, wz){
-    const geo = new THREE.BoxGeometry(CONFIG.cell*0.4, CONFIG.cell*0.9, CONFIG.cell*0.4);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xff6b6b, roughness:0.9 });
-    this.mesh = new THREE.Mesh(geo, mat);
-    this.mesh.castShadow = true;
-    this.hp = 3 + Math.floor(Math.random()*2);
-    this.speed = CONFIG.monSpeed * (0.8 + Math.random()*0.5);
-    this.knock = new THREE.Vector3();
-    this.knockTimer = 0;
-    this.mesh.position.set(wx, 0.45, wz);
-    scene.add(this.mesh);
-  }
-  update(dt){
-    // bob
-    this.mesh.position.y = 0.45 + Math.sin(performance.now()*0.002 + (this.mesh.position.x + this.mesh.position.z)) * 0.05;
-    if(this.knockTimer > 0){
-      this.mesh.position.addScaledVector(this.knock, dt);
-      this.knockTimer -= dt;
-      if(this.knockTimer <= 0) this.knock.set(0,0,0);
-      return;
+  // ===== MONSTER CLASS =====
+  class Monster {
+    constructor(x,z) {
+      const geo = new THREE.BoxGeometry(CELL*0.4, CELL*0.9, CELL*0.4);
+      const mat = new THREE.MeshStandardMaterial({ map: monsterTex, color: 0xff6666, roughness: 0.8, metalness:0.1 });
+      this.mesh = new THREE.Mesh(geo, mat);
+      this.mesh.castShadow = true;
+      this.mesh.position.set(x, 0.45, z);
+      scene.add(this.mesh);
+      const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+      const eyeMat = new THREE.MeshBasicMaterial({ color:0xff9933 });
+      this.eye = new THREE.Mesh(eyeGeo, eyeMat);
+      this.eye.position.set(0, 0.45, 0.26);
+      this.mesh.add(this.eye);
+      this.hp = 3 + Math.floor(Math.random()*3);
+      this.speed = MONSTER_SPEED * (0.8 + Math.random()*0.6);
+      this.knockback = new THREE.Vector3();
+      this.knockTimer = 0;
     }
-    const toPlayer = camera.position.clone().sub(this.mesh.position);
-    toPlayer.y = 0;
-    const dist = toPlayer.length();
-    if(dist > 1.6){
-      toPlayer.normalize();
-      const wanted = this.mesh.position.clone().addScaledVector(toPlayer, this.speed * dt);
-      if(!checkCollisionCircle(wanted.x, wanted.z, 0.35)){
-        this.mesh.position.copy(wanted);
+    update(dt) {
+      this.mesh.position.y = 0.45 + Math.sin(performance.now() * 0.002 + (this.mesh.position.x + this.mesh.position.z)) * 0.06;
+      const glow = 0.5 + Math.abs(Math.sin(performance.now()*0.003 + this.mesh.position.x)) * 0.6;
+      this.eye.material.color.setScalar(1.0);
+      this.eye.material.needsUpdate = true;
+      this.eye.scale.set(1,1,1).multiplyScalar(1 + (glow-0.5)*0.15);
+      const toPlayer = camera.position.clone().sub(this.mesh.position);
+      toPlayer.y = 0;
+      const dist = toPlayer.length();
+      if(this.knockTimer > 0){
+        this.mesh.position.addScaledVector(this.knockback, dt);
+        this.knockTimer -= dt;
+        if(this.knockTimer <= 0) this.knockback.set(0,0,0);
+        return;
       }
-    } else {
-      // attack
-      if(Math.random() < dt * 0.45){
-        player.damage(6 + Math.floor(Math.random()*4));
+      if(dist > 1.6) {
+        toPlayer.normalize();
+        const wanted = this.mesh.position.clone().addScaledVector(toPlayer, this.speed * dt);
+        if(!checkCollisionCircle(wanted.x, wanted.z, 0.35)){
+          this.mesh.position.copy(wanted);
+        }
+      } else {
+        if(Math.random() < dt * 0.25) {
+          player.damage(6 + Math.floor(Math.random()*5));
+        }
+      }
+    }
+    hit(dmg) {
+      this.hp -= dmg;
+      this.mesh.material.color.setHex(0xff4444);
+      setTimeout(()=> {
+        this.mesh.material.color.setHex(0xff6666);
+      }, 120);
+    }
+    applyKnockback(vec) {
+      this.knockback.copy(vec);
+      this.knockTimer = 0.15 + Math.random()*0.08;
+    }
+  }
+
+  // ===== PARTICLES =====
+  function spawnHitParticles(x,y,z){
+    const particleCount = 18 + Math.floor(Math.random()*12);
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    for(let i=0;i<particleCount;i++){
+      positions[i*3] = x;
+      positions[i*3+1] = y;
+      positions[i*3+2] = z;
+      const v = new THREE.Vector3((Math.random()*2-1)*1.8, Math.random()*1.6, (Math.random()*2-1)*1.8);
+      velocities.push(v);
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({ size: 0.08, color: 0xffd0a6, transparent:true });
+    const pts = new THREE.Points(geom, material);
+    pts._velocities = velocities;
+    pts._life = 0.8 + Math.random()*0.5;
+    scene.add(pts);
+    particles.push(pts);
+  }
+
+  function updateParticles(dt) {
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p._life -= dt;
+      const pos = p.geometry.attributes.position.array;
+      for(let j=0;j<pos.length/3;j++){
+        pos[j*3] += p._velocities[j].x * dt;
+        pos[j*3+1] += p._velocities[j].y * dt;
+        pos[j*3+2] += p._velocities[j].z * dt;
+        p._velocities[j].y -= 3.5 * dt;
+        p._velocities[j].multiplyScalar(0.995);
+      }
+      p.geometry.attributes.position.needsUpdate = true;
+      p.material.opacity = Math.max(0, p._life / 1.0);
+      if(p._life <= 0) {
+        scene.remove(p);
+        particles.splice(i,1);
       }
     }
   }
-  hit(dmg){
-    this.hp -= dmg;
-    this.mesh.material.color.setHex(0xff3030);
-    setTimeout(()=> this.mesh.material.color.setHex(0xff6b6b), 120);
-  }
-  applyKnockback(vec){
-    this.knock.copy(vec).multiplyScalar(2.5);
-    this.knockTimer = 0.12 + Math.random()*0.06;
-  }
-}
 
-// particles (simple)
-function spawnParticles(x,y,z){
-  const count = 10 + Math.floor(Math.random()*8);
-  const geom = new THREE.BufferGeometry();
-  const positions = new Float32Array(count*3);
-  const velocities = [];
-  for(let i=0;i<count;i++){
-    positions[i*3] = x; positions[i*3+1] = y; positions[i*3+2] = z;
-    velocities.push(new THREE.Vector3((Math.random()*2-1)*1.5, Math.random()*1.5, (Math.random()*2-1)*1.5));
-  }
-  geom.setAttribute('position', new THREE.BufferAttribute(positions,3));
-  const mat = new THREE.PointsMaterial({ size: 0.06, color: 0xffc080, transparent:true });
-  const pts = new THREE.Points(geom, mat);
-  pts._vel = velocities;
-  pts._life = 0.9 + Math.random()*0.5;
-  scene.add(pts);
-  particles.push(pts);
-}
-
-function updateParticles(dt){
-  for(let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p._life -= dt;
-    const arr = p.geometry.attributes.position.array;
-    for(let j=0;j<arr.length/3;j++){
-      arr[j*3] += p._vel[j].x * dt;
-      arr[j*3+1] += p._vel[j].y * dt;
-      arr[j*3+2] += p._vel[j].z * dt;
-      p._vel[j].y -= 3.5 * dt;
-      p._vel[j].multiplyScalar(0.995);
+  // ===== COLLISION =====
+  function checkCollisionCircle(wx, wz, radius) {
+    for(const w of walls){
+      const mx = w.mesh.position.x;
+      const mz = w.mesh.position.z;
+      const dx = wx - mx;
+      const dz = wz - mz;
+      const half = CELL*0.5 * 0.9;
+      const closestX = Math.max(-half, Math.min(half, dx));
+      const closestZ = Math.max(-half, Math.min(half, dz));
+      const ox = dx - closestX;
+      const oz = dz - closestZ;
+      const dist2 = ox*ox + oz*oz;
+      if(dist2 < (radius*radius)) return true;
     }
-    p.geometry.attributes.position.needsUpdate = true;
-    p.material.opacity = Math.max(0, p._life / 1.0);
-    if(p._life <= 0){ scene.remove(p); particles.splice(i,1); }
+    return false;
   }
-}
 
-// collision helper
-function checkCollisionCircle(wx, wz, radius){
-  for(const w of walls){
-    const mx = w.mesh.position.x, mz = w.mesh.position.z;
-    const dx = wx - mx, dz = wz - mz;
-    const half = CONFIG.cell*0.5 * 0.9;
-    const closestX = Math.max(-half, Math.min(half, dx));
-    const closestZ = Math.max(-half, Math.min(half, dz));
-    const ox = dx - closestX, oz = dz - closestZ;
-    if(ox*ox + oz*oz < radius*radius) return true;
-  }
-  return false;
-}
+  // ===== INPUT & POINTER LOCK =====
+  const inputState = { forward:false, back:false, left:false, right:false };
 
-// HUD
-function updateHUD(){
-  document.getElementById('enemyCount').innerText = monsters.length;
-  healthElem.innerText = `Health: ${player.health}`;
-  frames = 0; accum = 0; // reset fps tracking
-}
+  window.addEventListener('keydown', (e) => {
+    if(e.code === 'KeyW') inputState.forward = true;
+    if(e.code === 'KeyS') inputState.back = true;
+    if(e.code === 'KeyA') inputState.left = true;
+    if(e.code === 'KeyD') inputState.right = true;
+    if(e.code === 'KeyR') restart();
+  });
+  window.addEventListener('keyup', (e) => {
+    if(e.code === 'KeyW') inputState.forward = false;
+    if(e.code === 'KeyS') inputState.back = false;
+    if(e.code === 'KeyA') inputState.left = false;
+    if(e.code === 'KeyD') inputState.right = false;
+  });
 
-// sounds (create AudioContext on first user gesture)
-function ensureAudio(){
-  if(!audioCtx){
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-}
-function playSwingSound(){ ensureAudio(); if(!audioCtx) return; const o = audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='triangle'; o.frequency.value=700; g.gain.value=0.06; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.08); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.08); }
-function playHitSound(){ ensureAudio(); if(!audioCtx) return; const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.value=240; g.gain.value=0.12; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.1); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.1); }
+  renderer.domElement.style.cursor = 'pointer';
+  renderer.domElement.addEventListener('click', ()=> {
+    renderer.domElement.requestPointerLock();
+  });
+  document.addEventListener('pointerlockchange', ()=> {
+    pointerLocked = document.pointerLockElement === renderer.domElement;
+    renderer.domElement.style.cursor = pointerLocked ? 'none' : 'pointer';
+  });
 
-// input handlers
-function onKeyDown(e){
-  if(e.code === 'KeyW') input.forward = true;
-  if(e.code === 'KeyS') input.back = true;
-  if(e.code === 'KeyA') input.left = true;
-  if(e.code === 'KeyD') input.right = true;
-  if(e.code === 'KeyR') restart();
-  // allow audio to start after first keypress
-  ensureAudio();
-}
-function onKeyUp(e){
-  if(e.code === 'KeyW') input.forward = false;
-  if(e.code === 'KeyS') input.back = false;
-  if(e.code === 'KeyA') input.left = false;
-  if(e.code === 'KeyD') input.right = false;
-}
-function onMouseMove(e){
-  // initialize lastMouse once
-  if(!mouseInitialized){
-    lastMouse.x = e.clientX; lastMouse.y = e.clientY; mouseInitialized = true;
-  }
-  const dx = e.clientX - lastMouse.x;
-  const dy = e.clientY - lastMouse.y;
-  lastMouse.x = e.clientX; lastMouse.y = e.clientY;
-  const sens = 0.0026;
-  yaw -= dx * sens;
-  pitch -= dy * sens;
-  pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
-}
-function onMouseDown(e){
-  // left-click to swing
-  if(e.button === 0){
-    sword.startSwing();
-    ensureAudio(); // allow audio after a real click
-  }
-}
+  window.addEventListener('mousemove', (e) => {
+    if(!pointerLocked) return;
+    const sensitivity = 0.0026;
+    yaw -= e.movementX * sensitivity;
+    pitch -= e.movementY * sensitivity;
+    pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
+    camera.rotation.set(pitch, yaw, 0);
+  });
 
-// resize
-function onResize(){
-  camera.aspect = innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-}
-
-// restart
-function restart(){
-  // clear monsters & particles
-  monsters.forEach(m => scene.remove(m.mesh));
-  monsters.length = 0;
-  particles.forEach(p => scene.remove(p));
-  particles.length = 0;
-  // rebuild maze quickly
-  maze.generate();
-  const offsets = maze.build(scene);
-  player.setPosition(offsets.x + CONFIG.cell, offsets.z + CONFIG.cell);
-  for(let i=0;i<CONFIG.monsterCount;i++){
-    const pos = maze.randomFreeCellWorld(offsets);
-    monsters.push(new Monster(pos.x, pos.z));
-  }
-  player.health = 100; player.canMove = true;
-  updateHUD();
-  showTemporaryMessage('Restarted', 1200);
-}
-
-// messages / damage flash
-function showTemporaryMessage(text, ms=1200){
-  msgElem.style.display = 'block'; msgElem.innerText = text;
-  setTimeout(()=>{ msgElem.style.display = 'none'; }, ms);
-}
-function showMessage(text){
-  msgElem.style.display = 'block'; msgElem.innerText = text;
-}
-function showDamageFlash(){
-  // quick red flash overlay using CSS animation (create element)
-  const overlay = document.createElement('div');
-  overlay.style.position = 'fixed'; overlay.style.left='0'; overlay.style.top='0';
-  overlay.style.width='100%'; overlay.style.height='100%'; overlay.style.pointerEvents='none';
-  overlay.style.background='radial-gradient(circle at center, transparent 30%, rgba(255,0,0,0.25) 100%)';
-  overlay.style.zIndex = 50; overlay.style.opacity = '0';
-  document.body.appendChild(overlay);
-  overlay.animate([{opacity:0},{opacity:1},{opacity:0}], {duration:300}).onfinish = ()=> overlay.remove();
-}
-
-// MAIN LOOP
-function animate(){
-  const dt = Math.min(0.05, clock.getDelta());
-  // update
-  player.update(dt);
-  sword.update(dt);
-  monsters.forEach(m => m.update(dt));
-  updateParticles(dt);
-  // update HUD fps
-  frames++; accum += dt;
-  if(accum > 0.6){ fpsElem.innerText = `FPS: ${Math.round(frames/accum)}`; frames=0; accum=0; }
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
-}
-
-// SIMPLE PARTICLE UPDATER (already defined above)
-function updateParticles(dt){ // already present; safe to call again
-  for(let i=particles.length-1;i>=0;i--){
-    const p = particles[i];
-    p._life -= dt;
-    const arr = p.geometry.attributes.position.array;
-    for(let j=0;j<arr.length/3;j++){
-      arr[j*3] += p._vel[j].x * dt;
-      arr[j*3+1] += p._vel[j].y * dt;
-      arr[j*3+2] += p._vel[j].z * dt;
-      p._vel[j].y -= 3.5 * dt;
-      p._vel[j].multiplyScalar(0.995);
+  window.addEventListener('mousedown', (e)=>{
+    if(!pointerLocked) return;
+    if(e.button === 0) {
+      const started = playerSword.startSwing();
+      if(started){
+        playerNode.shake.intensity = 0.02;
+        playerNode.shake.duration = 0.08;
+      }
     }
-    p.geometry.attributes.position.needsUpdate = true;
-    p.material.opacity = Math.max(0, p._life / 1.0);
-    if(p._life <= 0){ scene.remove(p); particles.splice(i,1); }
+  });
+
+  // ===== AUDIO =====
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playTone(freq, time, type='sine', gain=0.05) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.value = gain;
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + time);
+    g.gain.setValueAtTime(g.gain.value, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time);
   }
-}
 
-// small helper to show the crosshair only when loaded
-function hideLoadingAndShowUI(){
-  const loading = document.getElementById('loading');
-  if(loading) loading.remove();
-}
+  function playFootstep(){ playTone(120 + Math.random()*30, 0.12, 'sine', 0.03); }
+  function playSwing(){ playTone(650 + Math.random()*120, 0.08, 'triangle', 0.08); playTone(320, 0.12, 'sine', 0.02); }
+  function playHit(){ playTone(240, 0.06, 'sawtooth', 0.12); playTone(980, 0.12, 'square', 0.04); }
 
-// UPDATE HUD after code created
-function updateHUDInitial(){
-  document.getElementById('enemyCount').innerText = monsters.length;
-  healthElem.innerText = `Health: ${player.health}`;
-}
+  // ===== PLAYER & SWORD & MONSTERS CREATION =====
+  const playerNode = new Player(camera);
+  playerNode.setPosition(offsets.offsetX + CELL, offsets.offsetZ + CELL);
 
-// BOOT: init on load immediately
-window.addEventListener('load', ()=>{
-  init();
-  hideLoadingAndShowUI();
-});
+  const playerSword = new Sword(playerNode);
 
-// Expose a few functions to console for debugging
-window._game = { restart };
+  function pickFreeCellWorld() {
+    while(true){
+      const x = Math.floor(Math.random() * (maze.w - 2)) + 1;
+      const z = Math.floor(Math.random() * (maze.h - 2)) + 1;
+      if(maze.grid[z][x] === '.'){
+        const wx = offsets.offsetX + x*CELL;
+        const wz = offsets.offsetZ + z*CELL;
+        if(Math.hypot(wx - playerNode.pos.x, wz - playerNode.pos.z) > CELL * 3) return {x:wx, z:wz};
+      }
+    }
+  }
 
-// END of script
+  for(let i=0;i<MONSTER_COUNT;i++){
+    const pos = pickFreeCellWorld();
+    const m = new Monster(pos.x, pos.z);
+    monsters.push(m);
+  }
+  hudMonsters.innerText = `Monsters: ${monsters.length}`;
+
+  // ===== OPTIONAL Decorative blocks =====
+  (function addDecorativeWalls(){
+    const decoGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+    const decoMat = new THREE.MeshPhongMaterial({ color: 0x6b6b6b });
+    for(let i=0;i<18;i++){
+      const d = new THREE.Mesh(decoGeo, decoMat);
+      const rx = (Math.random()-0.5) * CELL * MAZE_W * 1.2;
+      const rz = (Math.random()-0.5) * CELL * MAZE_H * 1.2;
+      d.position.set(rx, 0.8, rz);
+      d.castShadow = true;
+      scene.add(d);
+    }
+  })();
+
+  // ===== RESTART =====
+  function restart(){
+    monsters.forEach(m => scene.remove(m.mesh));
+    monsters.length = 0;
+    particles.forEach(p => scene.remove(p));
+    particles.length = 0;
+    maze.generate();
+    const newOffsets = maze.buildMeshes();
+    playerNode.setPosition(newOffsets.offsetX + CELL, newOffsets.offsetZ + CELL);
+    for(let i=0;i<MONSTER_COUNT;i++){
+      const pos = pickFreeCellWorld();
+      const m = new Monster(pos.x, pos.z);
+      monsters.push(m);
+    }
+    hudMonsters.innerText = `Monsters: ${monsters.length}`;
+    playerNode.health = 100;
+    hudHealth.innerText = `Health: ${playerNode.health}`;
+    messageBox.style.display = 'none';
+    playerNode.canMove = true;
+  }
+
+  // ===== PARTICLES & MINOR HELPERS =====
+  function spawnHitParticles(x,y,z) {
+    const particleCount = 18 + Math.floor(Math.random()*12);
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    for(let i=0;i<particleCount;i++){
+      positions[i*3] = x;
+      positions[i*3+1] = y;
+      positions[i*3+2] = z;
+      const v = new THREE.Vector3((Math.random()*2-1)*1.8, Math.random()*1.6, (Math.random()*2-1)*1.8);
+      velocities.push(v);
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({ size: 0.08, color: 0xffd0a6, transparent:true });
+    const pts = new THREE.Points(geom, material);
+    pts._velocities = velocities;
+    pts._life = 0.8 + Math.random()*0.5;
+    scene.add(pts);
+    particles.push(pts);
+  }
+
+  // ===== MAIN LOOP =====
+  let frames = 0, accum = 0;
+  function update(dt) {
+    playerNode.update(dt, inputState);
+    playerSword.update(dt);
+    for(const m of monsters) m.update(dt);
+    updateParticles(dt);
+    frames++;
+    accum += dt;
+    if(accum > 0.6){
+      hudFPS.innerText = `FPS: ${Math.round(frames/accum)}`;
+      frames = 0; accum = 0;
+    }
+  }
+
+  function render() {
+    renderer.render(scene, camera);
+  }
+
+  function animate() {
+    const dt = Math.min(0.05, clock.getDelta());
+    update(dt);
+    render();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+  showMessage('Click the canvas to lock pointer and play', 3500);
+
+  // ===== NOTES =====
+  // If you still want the version with NO pointer-lock and instant mouse-look,
+  // I can change input handling to allow mousemove rotation without pointer capture.
+  // Right now pointer lock is enabled (click to lock) for a proper FPS feel.
+})();
 </script>
 </body>
 </html>
