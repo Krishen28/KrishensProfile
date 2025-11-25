@@ -3,429 +3,770 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Dungeon Maze — Fast Start</title>
+<title>Ultimate Dungeon Maze — Polished HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
-  html,body{height:100%;margin:0;background:#04050a; color:#fff; font-family:Inter,system-ui,Arial; overflow:hidden;}
-  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; z-index:2000; color:#ddd; }
-  #loading.small { background:transparent; pointer-events:none; }
-  #hud { position:fixed; left:12px; top:12px; z-index:1500; background:rgba(0,0,0,0.35); padding:10px 12px; border-radius:8px; font-size:13px; }
-  #message{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1600;padding:18px 28px;border-radius:12px;background:rgba(0,0,0,0.8);display:none;}
-  #attackCooldown {position:fixed; left:50%; bottom:40px; transform:translateX(-50%); width:120px; height:8px; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; z-index:1500;}
-  #attackCooldownBar{height:100%; width:0%; background:linear-gradient(90deg,#ff8800,#ffcc66);}
-  canvas { display:block; }
+  :root{
+    --bg:#05060a;
+    --card:#0b1116;
+    --muted:#97bcd9;
+    --accent:#ff6b6b;
+    --accent2:#ffb86b;
+    --glass: rgba(255,255,255,0.04);
+    --glass-strong: rgba(255,255,255,0.06);
+  }
+
+  html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:#e6f7ff;overflow:hidden}
+  /* Canvas occupies full area */
+  #gameCanvas { display:block; width:100%; height:100%; }
+
+  /* Top-left status card similar to screenshot */
+  .status-card {
+    position:fixed; left:28px; top:28px; width:320px; z-index:2200;
+    background: linear-gradient(180deg, rgba(20,20,30,0.9), rgba(8,10,14,0.85));
+    border-radius:14px; padding:18px; box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.04);
+    backdrop-filter: blur(6px);
+  }
+  .status-title{ font-family: "Playfair Display", serif; color: #ffc6c6; letter-spacing:2px; font-size:18px; margin-bottom:8px; }
+  .status-row{ display:flex; justify-content:space-between; align-items:center; margin:8px 0; }
+  .status-label{ color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:1px; }
+  .status-value{ font-weight:700; font-size:16px; color:#fff; }
+
+  /* Health bar */
+  .health-wrap{ margin-top:8px; }
+  .health-bar-bg{ height:14px; background:var(--glass); border-radius:10px; overflow:hidden; box-shadow: inset 0 -6px 20px rgba(0,0,0,0.6); border:1px solid rgba(0,0,0,0.5); }
+  .health-bar{
+    height:100%;
+    width:100%;
+    background: linear-gradient(90deg, #ff6644, #ffb86b);
+    transition: width 300ms ease;
+    box-shadow: 0 4px 18px rgba(255,110,80,0.15);
+  }
+  .stat-grid{ display:flex; gap:12px; margin-top:12px; }
+  .stat-mini{ flex:1; background:var(--glass-strong); padding:8px 10px; border-radius:10px; text-align:center; border:1px solid rgba(255,255,255,0.02); }
+  .stat-mini .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  .stat-mini .val{ font-weight:700; font-size:14px; margin-top:6px; color:#fff; }
+
+  /* Top-right small card for FPS/Level */
+  .fps-card{
+    position:fixed; right:28px; top:28px; z-index:2200;
+    width:120px; padding:12px; border-radius:12px; background: linear-gradient(180deg, rgba(10,12,18,0.85), rgba(5,6,10,0.88));
+    border:1px solid rgba(255,255,255,0.03); box-shadow:0 8px 30px rgba(0,0,0,0.5);
+    text-align:right;
+  }
+  .fps-card .small{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  .fps-card .big{ font-weight:800; font-size:18px; color:#fff; margin-top:6px; }
+
+  /* Minimap framed, bottom-right */
+  .minimap {
+    position:fixed; right:28px; bottom:28px; z-index:2200; width:220px; height:220px;
+    background: linear-gradient(180deg, rgba(12,14,18,0.92), rgba(6,8,10,0.92));
+    border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,0.05); box-shadow:0 12px 40px rgba(0,0,0,0.7);
+  }
+  canvas.minimap-canvas{ width:100%; height:100%; display:block; border-radius:8px; background:#0a0b0e; }
+
+  /* Small transparent HUD row bottom-center */
+  .controls-card{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%); z-index:2100; background: rgba(6,8,12,0.45); padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); font-size:13px; color:var(--muted); }
+
+  /* Crosshair */
+  .crosshair{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.95); box-shadow:0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(120,200,255,0.08); z-index:2000; pointer-events:none; }
+
+  /* Loading overlay */
+  #loadingOverlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; z-index:9999; color:#cfe9ff; font-size:18px; }
+  .spinner{ width:56px; height:56px; border-radius:50%; border:4px solid rgba(255,255,255,0.06); border-top-color:#6fbce8; animation: spin 1s linear infinite; margin-bottom:12px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* message overlay (center) */
+  .message{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:3000; display:none; background:linear-gradient(180deg, rgba(0,0,0,0.7), rgba(6,8,12,0.85)); padding:18px 26px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); font-size:18px; }
+
+  /* small tooltip style for minor warnings */
+  .notice{ position:fixed; left:28px; bottom:28px; z-index:2100; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px; color:var(--muted); font-size:12px; border:1px solid rgba(255,255,255,0.02); }
+
+  /* Responsive shrink */
+  @media (max-width:780px){
+    .status-card{ left:12px; top:12px; width:260px; padding:14px; }
+    .minimap{ right:12px; bottom:12px; width:160px; height:160px; }
+    .fps-card{ right:12px; top:12px; width:96px; padding:10px; }
+  }
 </style>
 </head>
 <body>
-<div id="loading"><div><strong>Dungeon Maze</strong><div style="font-size:13px;margin-top:6px">Starting…</div></div></div>
-<div id="hud">Health: <span id="health">100</span> — Enemies: <span id="enemies">0</span> — FPS: <span id="fps">0</span></div>
-<div id="attackCooldown"><div id="attackCooldownBar"></div></div>
-<div id="message"></div>
 
-<!-- Fast, single-file build using non-module three (works without bundling) -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<!-- Loading overlay immediately visible -->
+<div id="loadingOverlay">
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <div style="font-size:20px; font-weight:600; margin-bottom:6px;">Dungeon Maze</div>
+    <div style="color: #9fb7d9;">Preparing world — visible now</div>
+  </div>
+</div>
 
+<!-- Left status card -->
+<div class="status-card" aria-live="polite">
+  <div class="status-title">⚔️ STATUS</div>
+
+  <div class="status-row">
+    <div>
+      <div class="status-label">Health</div>
+      <div class="status-value" id="hud-health">100</div>
+    </div>
+    <div style="width:48%; text-align:left;">
+      <div class="health-wrap">
+        <div class="health-bar-bg"><div id="hud-healthbar" class="health-bar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-grid" style="margin-top:12px;">
+    <div class="stat-mini">
+      <div class="label">Enemies</div>
+      <div class="val" id="hud-enemies">0</div>
+    </div>
+    <div class="stat-mini">
+      <div class="label">Score</div>
+      <div class="val" id="hud-score">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Top-right small card -->
+<div class="fps-card">
+  <div class="small">FPS</div>
+  <div class="big" id="hud-fps">0</div>
+  <div style="height:8px"></div>
+  <div class="small" style="opacity:0.85">Level</div>
+  <div style="font-weight:700; margin-top:6px" id="hud-level">1</div>
+</div>
+
+<!-- Minimap -->
+<div class="minimap" aria-hidden="true">
+  <canvas id="minimapCanvas" class="minimap-canvas" width="200" height="200"></canvas>
+</div>
+
+<!-- center crosshair -->
+<div class="crosshair" id="crosshair" aria-hidden="true"></div>
+
+<!-- controls hint -->
+<div class="controls-card" aria-hidden="true">W A S D • Move &nbsp; • &nbsp; Mouse Look (click to lock) &nbsp; • &nbsp; Click: Attack &nbsp; • &nbsp; R: Restart</div>
+
+<!-- center message -->
+<div id="centerMessage" class="message"></div>
+
+<!-- main canvas will be inserted by script for WebGL -->
 <script>
-/*
-  Fast-start Dungeon Maze
-  - Immediate first frame: procedural textures + minimal setup
-  - Background: lazy-load remote textures and higher particle/lighting details
-  - Optional: uses uploaded local path (see below) if available for later use
-*/
+/* ===========================
+   Polished single-file maze game
+   - immediate visible UI
+   - polished HUD like screenshot
+   - corrected WASD movement (W forward)
+   - lazy background texture loading
+   - mural uses uploaded file path below
+   ============================ */
 
-const uploadedLocalPath = '/mnt/data/Screenshot 2025-11-24 at 11.14.38 AM.png'; // developer-provided path
+const LOCAL_MURAL = '/mnt/data/Screenshot 2025-11-25 at 11.12.23 AM.png'; // developer-provided uploaded image path
 
-// CONFIG - tuned for instant start
-const CONFIG = {
-  mazeW: 21, mazeH: 21, cell: 2.5,
-  playerHeight: 1.7, playerSpeed: 3.2, playerRadius: 0.36,
-  monsters: 8, particleCountInitial: 80, particleCountFull: 300,
-  shadowSizeLow: 512, shadowSizeHigh: 1024
+// ---- lightweight safety checks for DOM elements ----
+const HUD = {
+  healthText: document.getElementById('hud-health'),
+  healthBar: document.getElementById('hud-healthbar'),
+  enemies: document.getElementById('hud-enemies'),
+  score: document.getElementById('hud-score'),
+  fps: document.getElementById('hud-fps'),
+  level: document.getElementById('hud-level'),
+  loading: document.getElementById('loadingOverlay'),
+  centerMessage: document.getElementById('centerMessage')
 };
 
-// DOM refs
-const loadingEl = document.getElementById('loading');
-const hudHealth = document.getElementById('health');
-const hudEnemies = document.getElementById('enemies');
-const hudFPS = document.getElementById('fps');
-const msgBox = document.getElementById('message');
-const cooldownBar = document.getElementById('attackCooldownBar');
+// --------- THREE setup (UMD build assumed loaded externally) ---------
+const THREE_LOADED = typeof THREE !== 'undefined';
+if(!THREE_LOADED){
+  // If three.js not loaded, show a message
+  document.body.innerHTML = '<div style="color:#fff;padding:20px;">Three.js missing — ensure <code>three.min.js</code> is loaded.</div>';
+  throw new Error('Three.js not present');
+}
 
-// Minimal immediate three setup (procedural textures)
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07080c);
-
-const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
-camera.position.set(CONFIG.cell, CONFIG.playerHeight, CONFIG.cell);
-
-// create renderer and append immediately so user sees something
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// create renderer and canvas
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.appendChild(renderer.domElement);
+// insert canvas at top so HUD overlays
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
-// handle resize
-window.addEventListener('resize', () => {
+// core scene & camera
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070814);
+scene.fog = new THREE.FogExp2(0x070814, 0.035);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 500);
+camera.position.y = 1.7;
+
+// responsive resize
+window.addEventListener('resize', ()=> {
   camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// --- quick procedural textures so we don't wait on network ---
-function createCanvasTexture(drawFn, size=256) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const ctx = c.getContext('2d');
-  drawFn(ctx, size);
+// small helper texture creation for instant visuals
+function makeCanvasTexture(draw, size=256){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d'); draw(ctx, size);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
 
-const floorTexFast = createCanvasTexture((ctx,s)=>{
-  ctx.fillStyle = '#10121a'; ctx.fillRect(0,0,s,s);
-  ctx.fillStyle = '#14161b';
-  for(let y=0;y<s;y+=32) for(let x=0;x<s;x+=32) ctx.fillRect(x+2,y+2,28,28);
+// quick floor + wall textures (procedural, instant)
+const floorTex = makeCanvasTexture((ctx,s)=>{
+  ctx.fillStyle = '#0f1116'; ctx.fillRect(0,0,s,s);
+  for(let y=0;y<s;y+=18) for(let x=0;x<s;x+=18){ ctx.fillStyle = `rgb(${10+Math.random()*8},${10+Math.random()*8},${16+Math.random()*8})`; ctx.fillRect(x+2, y+2, 14, 14); }
 });
-floorTexFast.repeat = new THREE.Vector2(10,10);
+floorTex.repeat = new THREE.Vector2(18,18);
 
-const wallTexFast = createCanvasTexture((ctx,s)=>{
-  ctx.fillStyle = '#15141a'; ctx.fillRect(0,0,s,s);
-  ctx.fillStyle = '#222';
-  for(let y=0;y<s;y+=28) for(let x=0;x<s;x+=56) ctx.fillRect(x+(y/28%2?10:0), y, 48, 18);
+const wallTex = makeCanvasTexture((ctx,s)=>{
+  ctx.fillStyle='#121318'; ctx.fillRect(0,0,s,s);
+  ctx.fillStyle='#191a21';
+  for(let y=0;y<s;y+=28) for(let x=0;x<s;x+=56) ctx.fillRect(x + ((y/28)%2?6:0), y+2, 46, 16);
 });
 
-// basic lights (lightweight)
-const hemi = new THREE.HemisphereLight(0x666688, 0x20222a, 0.25);
+// lighting
+const hemi = new THREE.HemisphereLight(0x7fb1ff, 0x10121a, 0.28);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffffff, 0.5);
-sun.position.set(20, 40, 20);
+
+const sun = new THREE.DirectionalLight(0xfff6e6, 0.9);
+sun.position.set(30, 50, 20);
 sun.castShadow = true;
-sun.shadow.mapSize.set(CONFIG.shadowSizeLow, CONFIG.shadowSizeLow);
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.bias = -0.0005;
 scene.add(sun);
 
-// floor immediate
+// subtle fill light
+const rim = new THREE.DirectionalLight(0xffb86b, 0.12);
+rim.position.set(-20, 10, -10);
+scene.add(rim);
+
+// floor mesh immediate
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(200,200),
-  new THREE.MeshStandardMaterial({ map: floorTexFast, roughness: 1 })
+  new THREE.PlaneGeometry(300, 300, 6, 6),
+  new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.98 })
 );
 floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// --- Light-weight maze generator (immediate) ---
+// -------- Maze (recursive backtracker) --------
 class Maze {
   constructor(w,h){
-    this.w = (w%2? w: w+1);
-    this.h = (h%2? h: h+1);
+    this.w = (w % 2 === 0) ? w+1 : w;
+    this.h = (h % 2 === 0) ? h+1 : h;
     this.grid = Array(this.h).fill().map(()=>Array(this.w).fill('#'));
   }
-  generate() {
+  generate(){
     const dirs = [{x:0,z:-2},{x:2,z:0},{x:0,z:2},{x:-2,z:0}];
     const stack = [{x:1,z:1}];
-    this.grid[1][1] = '.';
+    this.grid[1][1]='.';
     while(stack.length){
       const cur = stack[stack.length-1];
-      const neigh = [];
+      const neighbors = [];
       for(const d of dirs){
         const nx = cur.x + d.x, nz = cur.z + d.z;
-        if(nx>0 && nz>0 && nx<this.w-1 && nz<this.h-1 && this.grid[nz][nx]==='#') neigh.push({x:nx,z:nz,dir:d});
+        if(nx>0 && nz>0 && nx<this.w-1 && nz<this.h-1 && this.grid[nz][nx] === '#') neighbors.push({x:nx,z:nz,dir:d});
       }
-      if(neigh.length===0) stack.pop();
+      if(neighbors.length === 0) stack.pop();
       else {
-        const pick = neigh[Math.floor(Math.random()*neigh.length)];
+        const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
         this.grid[cur.z + pick.dir.z/2][cur.x + pick.dir.x/2] = '.';
         this.grid[pick.z][pick.x] = '.';
         stack.push({x:pick.x,z:pick.z});
       }
     }
-    this.grid[1][0] = '.';
-    this.grid[this.h-2][this.w-1] = '.';
+    // entrance/exit
+    this.grid[1][0]='.'; this.grid[this.h-2][this.w-1]='.';
   }
-  buildImmediate(scene) {
-    // use single simple material and simple geometry for instant frames
-    this.offsetX = - (this.w * CONFIG.cell)/2 + CONFIG.cell/2;
-    this.offsetZ = - (this.h * CONFIG.cell)/2 + CONFIG.cell/2;
-    const geo = new THREE.BoxGeometry(CONFIG.cell*0.96, CONFIG.cell*1.05, CONFIG.cell*0.96);
-    const mat = new THREE.MeshStandardMaterial({ map: wallTexFast, roughness: 1 });
-    this.wallMeshes = [];
+  build(scene){
+    // remove old walls
+    if(this._walls) this._walls.forEach(w => scene.remove(w.mesh));
+    this._walls = [];
+    const geo = new THREE.BoxGeometry(CONFIG_CELL*0.98, CONFIG_CELL*1.1, CONFIG_CELL*0.98);
+    const mat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 });
+    const offsetX = - (this.w * CONFIG_CELL)/2 + CONFIG_CELL/2;
+    const offsetZ = - (this.h * CONFIG_CELL)/2 + CONFIG_CELL/2;
     for(let z=0; z<this.h; z++){
       for(let x=0; x<this.w; x++){
-        if(this.grid[z][x]==='#'){
+        if(this.grid[z][x] === '#'){
           const m = new THREE.Mesh(geo, mat);
-          m.position.set(this.offsetX + x*CONFIG.cell, (CONFIG.cell*1.05)/2, this.offsetZ + z*CONFIG.cell);
+          m.position.set(offsetX + x*CONFIG_CELL, (CONFIG_CELL*1.1)/2, offsetZ + z*CONFIG_CELL);
           m.castShadow = true; m.receiveShadow = true;
           scene.add(m);
-          this.wallMeshes.push({mesh:m,x,z});
+          this._walls.push({mesh:m,x,z});
         }
       }
     }
-    return { offsetX: this.offsetX, offsetZ: this.offsetZ, walls:this.wallMeshes };
+    this.offsetX = offsetX; this.offsetZ = offsetZ;
+    return { walls: this._walls, offsetX, offsetZ };
   }
 }
 
-// Create instantly visible maze + walls now
+// small configuration constants used by classes below
+const CONFIG_CELL = 2.5;
+const CONFIG = {
+  mazeW: 21, mazeH: 21, cell: CONFIG_CELL,
+  player: { height:1.7, speed:3.5, radius:0.36, maxHealth:100 },
+  monster: { count: 10, speed: 1.25 },
+  combat: { range: 2.6, damage: 1, cooldown:0.45 }
+};
+
+// create maze and build walls immediately
 const maze = new Maze(CONFIG.mazeW, CONFIG.mazeH);
 maze.generate();
-const built = maze.buildImmediate(scene);
-let walls = built.walls;
+const built = maze.build(scene);
+let WALLS = built.walls;
 
-// --- player & simple movement (instant) ---
-const player = { health: 100, yaw:0, pitch:0, canMove:true, x: built.offsetX + CONFIG.cell, z: built.offsetZ + CONFIG.cell };
-camera.position.set(player.x, CONFIG.playerHeight, player.z);
+// place camera at start
+camera.position.set(built.offsetX + CONFIG.cell, CONFIG.player.height, built.offsetZ + CONFIG.cell);
 
-// minimal sword placeholder (visible immediately)
-const sword = (function(){
-  const g = new THREE.Group();
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.12), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness:0.8 }));
-  blade.position.set(0.35,-0.5,-0.9);
-  const h = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.24,0.12), new THREE.MeshStandardMaterial({ color:0x552200 }));
-  h.position.set(0.35,-0.9,-0.9);
-  g.add(blade,h);
-  g.position.set(0,0,0);
-  camera.add(g);
-  scene.add(camera);
-  return { group:g, swinging:false, timer:0, cooldown:0 };
-})();
+// ---------- Sword model attached to camera ----------
+const swordGroup = new THREE.Group();
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.08, 0.12), new THREE.MeshStandardMaterial({ color:0xe8eef8, metalness:0.9, roughness:0.1 }));
+blade.position.set(0.38, -0.6, -1.05);
+const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.28,12), new THREE.MeshStandardMaterial({ color:0x523410, roughness:0.8 }));
+grip.position.set(0.38, -1.05, -1.05);
+swordGroup.add(blade, grip);
+swordGroup.position.set(0,0,0);
+camera.add(swordGroup);
+scene.add(camera);
 
-// simple array of monster placeholders (boxes) so HUD isn't empty — spawn minimal boxes now
-let monsters = [];
-function spawnMonstersImmediate(count){
-  for(let i=0;i<count;i++){
-    // pick random free cell quickly
-    let tries=0;
-    while(tries++ < 80){
-      const x = Math.floor(Math.random() * (maze.w - 2)) + 1;
-      const z = Math.floor(Math.random() * (maze.h - 2)) + 1;
-      if(maze.grid[z][x] === '.') {
-        const wx = built.offsetX + x*CONFIG.cell;
-        const wz = built.offsetZ + z*CONFIG.cell;
-        if(Math.hypot(wx - player.x, wz - player.z) > CONFIG.cell*3) {
-          const b = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.cell*0.36, CONFIG.cell*0.9, CONFIG.cell*0.36), new THREE.MeshStandardMaterial({ color:0xff4444 }));
-          b.position.set(wx, 0.45, wz);
-          b.castShadow = true;
-          scene.add(b);
-          monsters.push({ mesh:b, hp:3 });
-          break;
+// ---------- Monsters (simple boxes) ----------
+let MONSTERS = [];
+function spawnMonsters(n){
+  for(let i=0;i<n;i++){
+    let placed=false, attempts=0;
+    while(!placed && attempts++ < 120){
+      const rx = Math.floor(Math.random()*(maze.w-2))+1;
+      const rz = Math.floor(Math.random()*(maze.h-2))+1;
+      if(maze.grid[rz][rx] === '.'){
+        const wx = built.offsetX + rx*CONFIG.cell;
+        const wz = built.offsetZ + rz*CONFIG.cell;
+        if(Math.hypot(wx-camera.position.x, wz-camera.position.z) > CONFIG.cell*3){
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.cell*0.42, CONFIG.cell*0.9, CONFIG.cell*0.42), new THREE.MeshStandardMaterial({ color:0xff6b6b, roughness:0.86 }));
+          mesh.position.set(wx, (CONFIG.cell*0.9)/2, wz);
+          mesh.castShadow = true;
+          scene.add(mesh);
+          MONSTERS.push({ mesh, hp: 3 + Math.floor(Math.random()*2), velocity: new THREE.Vector3() });
+          placed = true;
         }
       }
     }
   }
-  hudEnemies.textContent = monsters.length;
+  HUD.enemies.textContent = MONSTERS.length;
 }
-spawnMonstersImmediate(CONFIG.monsters);
+spawnMonsters(CONFIG.monster.count);
 
-// INPUT (instant)
-const input = { w:false,a:false,s:false,d:false, pointerLocked:false };
-window.addEventListener('keydown', e => {
-  if(e.code==='KeyW') input.w=true;
-  if(e.code==='KeyS') input.s=true;
-  if(e.code==='KeyA') input.a=true;
-  if(e.code==='KeyD') input.d=true;
-  if(e.code==='KeyR') location.reload();
+// ---------- Particles (small) ----------
+let PARTICLES = [];
+function spawnHitParticles(x,y,z){
+  for(let i=0;i<16;i++){
+    const geo = new THREE.SphereGeometry(0.04, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffc8b0, transparent:true, opacity:0.9 });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m._vel = new THREE.Vector3((Math.random()-0.5)*2, Math.random()*2 + 0.4, (Math.random()-0.5)*2);
+    m._life = 0.9 + Math.random()*0.5;
+    scene.add(m);
+    PARTICLES.push(m);
+  }
+}
+
+// ---------- collision helper ----------
+function checkCollisionCircle(wx, wz, radius){
+  for(const w of WALLS){
+    const dx = wx - w.mesh.position.x, dz = wz - w.mesh.position.z;
+    const half = CONFIG.cell * 0.49;
+    const closestX = Math.max(-half, Math.min(half, dx));
+    const closestZ = Math.max(-half, Math.min(half, dz));
+    const ox = dx - closestX, oz = dz - closestZ;
+    if(ox*ox + oz*oz < radius*radius) return true;
+  }
+  return false;
+}
+
+// ---------- Input & pointer-lock ----------
+const STATE = {
+  player: { yaw: 0, pitch: 0, health: CONFIG.player.maxHealth, canMove:true },
+  input: { forward:false, back:false, left:false, right:false, pointer:false },
+  combat: { swinging:false, timer:0, cooldown:0 }
+};
+
+window.addEventListener('keydown', (e)=> {
+  if(e.code === 'KeyW') STATE.input.forward = true;
+  if(e.code === 'KeyS') STATE.input.back = true;
+  if(e.code === 'KeyA') STATE.input.left = true;
+  if(e.code === 'KeyD') STATE.input.right = true;
+  if(e.code === 'KeyR') restart();
 });
-window.addEventListener('keyup', e => {
-  if(e.code==='KeyW') input.w=false;
-  if(e.code==='KeyS') input.s=false;
-  if(e.code==='KeyA') input.a=false;
-  if(e.code==='KeyD') input.d=false;
+window.addEventListener('keyup', (e)=> {
+  if(e.code === 'KeyW') STATE.input.forward = false;
+  if(e.code === 'KeyS') STATE.input.back = false;
+  if(e.code === 'KeyA') STATE.input.left = false;
+  if(e.code === 'KeyD') STATE.input.right = false;
 });
 
-// pointer lock on click
-renderer.domElement.addEventListener('click', ()=> {
-  renderer.domElement.requestPointerLock();
-});
+// pointer lock
+renderer.domElement.style.cursor = 'pointer';
+renderer.domElement.addEventListener('click', ()=> renderer.domElement.requestPointerLock());
 document.addEventListener('pointerlockchange', ()=> {
-  input.pointerLocked = document.pointerLockElement === renderer.domElement;
+  STATE.input.pointer = document.pointerLockElement === renderer.domElement;
+  document.getElementById('crosshair').style.display = STATE.input.pointer ? 'block' : 'none';
 });
 
-// immediate mouse look (if pointer locked)
-window.addEventListener('mousemove', e => {
-  if(!input.pointerLocked) return;
-  const sens = 0.0024;
-  player.yaw -= e.movementX * sens;
-  player.pitch -= e.movementY * sens;
-  player.pitch = Math.max(-Math.PI/2+0.01, Math.min(Math.PI/2-0.01, player.pitch));
-  camera.rotation.set(player.pitch, player.yaw, 0);
+// mouse look
+window.addEventListener('mousemove', (e)=>{
+  if(!STATE.input.pointer) return;
+  const sensitivity = 0.0024;
+  STATE.player.yaw -= e.movementX * sensitivity;
+  STATE.player.pitch -= e.movementY * sensitivity;
+  STATE.player.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, STATE.player.pitch));
+  camera.rotation.set(STATE.player.pitch, STATE.player.yaw, 0);
 });
 
-// movement tick - minimal collision naively using walls bounding boxes
-function simpleMove(dt){
-  const forward = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-  const right = new THREE.Vector3(Math.sin(player.yaw + Math.PI/2), 0, Math.cos(player.yaw + Math.PI/2));
+// ---------- movement (corrected forward vector) ----------
+function movePlayer(dt){
+  if(!STATE.player.canMove) return;
+  const forward = new THREE.Vector3(Math.sin(STATE.player.yaw), 0, -Math.cos(STATE.player.yaw)); // <- corrected forward
+  const right = new THREE.Vector3(Math.sin(STATE.player.yaw + Math.PI/2), 0, -Math.cos(STATE.player.yaw + Math.PI/2));
   const move = new THREE.Vector3();
-  if(input.w) move.addScaledVector(forward,1);
-  if(input.s) move.addScaledVector(forward,-1);
-  if(input.a) move.addScaledVector(right,-1);
-  if(input.d) move.addScaledVector(right,1);
-  if(move.lengthSq()>0.0001){
+  if(STATE.input.forward) move.addScaledVector(forward, 1);
+  if(STATE.input.back) move.addScaledVector(forward, -1);
+  if(STATE.input.left) move.addScaledVector(right, -1);
+  if(STATE.input.right) move.addScaledVector(right, 1);
+  if(move.length() > 0.0001){
     move.normalize();
-    const destX = camera.position.x + move.x * CONFIG.playerSpeed * dt;
-    const destZ = camera.position.z + move.z * CONFIG.playerSpeed * dt;
-    // cheap collision: reject if too close to any wall center
-    let blocked = false;
-    const r = CONFIG.playerRadius;
-    for(const w of walls){
-      const dx = destX - w.mesh.position.x, dz = destZ - w.mesh.position.z;
-      const half = CONFIG.cell*0.5*0.9;
-      const closestX = Math.max(-half, Math.min(half, dx));
-      const closestZ = Math.max(-half, Math.min(half, dz));
-      const ox = dx - closestX, oz = dz - closestZ;
-      if(ox*ox + oz*oz < r*r){ blocked = true; break; }
-    }
-    if(!blocked){
-      camera.position.x = destX;
-      camera.position.z = destZ;
+    const nx = camera.position.x + move.x * CONFIG.player.speed * dt;
+    const nz = camera.position.z + move.z * CONFIG.player.speed * dt;
+    if(!checkCollisionCircle(nx, nz, CONFIG.player.radius)){
+      camera.position.x = nx;
+      camera.position.z = nz;
     }
   }
 }
 
-// particle system (simple initial particles)
-let particles = [];
-function spawnParticle(x,y,z){
-  const p = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color:0x66aaff, size:0.06, transparent:true, opacity:0.6 }));
-  const arr = new Float32Array([x,y,z]);
-  p.geometry.setAttribute('position', new THREE.BufferAttribute(arr,3));
-  p._life = 1.0;
-  scene.add(p);
-  particles.push(p);
+// ---------- Sword & combat ----------
+function startSwing(){
+  if(STATE.combat.cooldown > 0) return false;
+  STATE.combat.swinging = true;
+  STATE.combat.timer = 0.01;
+  STATE.combat.cooldown = CONFIG.combat.cooldown;
+  playSwingTone();
+  return true;
+}
+window.addEventListener('mousedown', (e) => { if(e.button === 0 && STATE.input.pointer) startSwing(); });
+
+// update sword
+function updateSword(dt){
+  if(STATE.combat.cooldown > 0) STATE.combat.cooldown = Math.max(0, STATE.combat.cooldown - dt);
+  if(STATE.combat.swinging){
+    STATE.combat.timer += dt * 6.5;
+    const progress = STATE.combat.timer;
+    const angle = Math.sin(progress) * Math.PI * 0.7;
+    swordGroup.rotation.x = angle - 0.6;
+    // detect hit near peak
+    if(progress > Math.PI * 0.28 && progress < Math.PI * 0.62 && !STATE.combat._didHit){
+      STATE.combat._didHit = true;
+      tryHit();
+    }
+    if(progress > Math.PI){
+      STATE.combat.swinging = false; STATE.combat.timer = 0; STATE.combat._didHit = false;
+      swordGroup.rotation.x = -0.2;
+    }
+  } else {
+    swordGroup.rotation.x = -0.2 + Math.sin(performance.now()*0.002) * 0.02;
+  }
+  // cooldown bar
+  const pct = 1 - (STATE.combat.cooldown / CONFIG.combat.cooldown || 0);
+  HUD_elem_setWidth(HUD.healthBar, pct * 100); // no - keep healthBar but we will separately set attack bar; keep thin approach
+  document.getElementById('hud-healthbar').style.width = (STATE.player && STATE.player.health ? STATE.player.health / CONFIG.player.maxHealth * 100 : 100) + '%';
+  // attack cooldown bar (bottom center)
+  const attackBar = document.querySelector('.controls-card + .crosshair') || null; // avoid; we'll create separate element later
+  // update visible small cooldown in controls (we have one global attackBar under controls via CSS? no - keep simple)
+  const attackUI = document.getElementById('attackBarUI');
+  if(attackUI) attackUI.style.width = `${Math.max(0, Math.min(100, (1 - (STATE.combat.cooldown / CONFIG.combat.cooldown)) * 100))}%`;
 }
 
-// --- main loop (immediate) ---
-const clock = new THREE.Clock();
-let frameCount=0, fpsAccum=0;
-function renderFrame(){
-  const dt = Math.min(clock.getDelta(), 0.06);
-  // movement
-  simpleMove(dt);
+// try to hit monsters
+function tryHit(){
+  const forward = new THREE.Vector3(Math.sin(STATE.player.yaw), 0, -Math.cos(STATE.player.yaw)).normalize();
+  for(let i = MONSTERS.length - 1; i >= 0; i--){
+    const m = MONSTERS[i];
+    const toM = m.mesh.position.clone().sub(camera.position);
+    const dist = toM.length();
+    if(dist <= CONFIG.combat.range){
+      toM.y = 0; toM.normalize();
+      if(forward.dot(toM) > 0.4){
+        m.hp -= CONFIG.combat.damage + Math.floor(Math.random()*2);
+        spawnHitParticles(m.mesh.position.x, m.mesh.position.y + 0.6, m.mesh.position.z);
+        // knockback
+        const kb = toM.clone().multiplyScalar(-1.1);
+        m.velocity.add(kb);
+        playHitTone();
+        if(m.hp <= 0){
+          scene.remove(m.mesh);
+          MONSTERS.splice(i,1);
+          HUD.enemies.textContent = MONSTERS.length;
+          HUD.score.textContent = (parseInt(HUD.score.textContent||'0') + 100);
+          if(MONSTERS.length === 0) victory();
+        }
+      }
+    }
+  }
+}
 
-  // sword cooldown decrement quickly
-  if(sword.cooldown > 0) sword.cooldown = Math.max(0, sword.cooldown - dt);
-  // particles fade
-  for(let i = particles.length-1; i>=0; i--){
-    const p = particles[i];
+// ---------- Monster AI ----------
+function updateMonsters(dt){
+  for(const m of MONSTERS){
+    // apply knockback velocity
+    if(m.velocity.length() > 0.01){
+      m.mesh.position.addScaledVector(m.velocity, dt);
+      m.velocity.multiplyScalar(0.88);
+    }
+    // basic chase behavior
+    const toPlayer = camera.position.clone().sub(m.mesh.position);
+    toPlayer.y = 0;
+    const dist = toPlayer.length();
+    if(dist > 1.6 && dist < 18){
+      toPlayer.normalize();
+      const next = m.mesh.position.clone().addScaledVector(toPlayer, CONFIG.monster.speed * dt);
+      if(!checkCollisionCircle(next.x, next.z, 0.35)){
+        m.mesh.position.x = next.x; m.mesh.position.z = next.z;
+      }
+    } else if(dist <= 1.6){
+      // attack
+      if(!m._atk || m._atk <= 0){
+        damagePlayer(6 + Math.floor(Math.random()*4));
+        m._atk = 1.2 + Math.random()*0.6;
+      }
+      m._atk = (m._atk || 0) - dt;
+    }
+    // simple bob
+    m.mesh.position.y = 0.45 + Math.sin((performance.now()+m.mesh.position.x)*0.002) * 0.04;
+  }
+}
+
+// ---------- particles update ----------
+function updateParticles(dt){
+  for(let i = PARTICLES.length - 1; i >= 0; i--){
+    const p = PARTICLES[i];
     p._life -= dt;
-    p.material.opacity = Math.max(0, p._life);
-    if(p._life <= 0){ scene.remove(p); particles.splice(i,1); }
+    p.position.addScaledVector(p._vel, dt);
+    if(p.material) p.material.opacity = Math.max(0, p._life);
+    if(p._life <= 0){
+      scene.remove(p);
+      PARTICLES.splice(i,1);
+    }
   }
+}
 
-  // simple monsters idle move a little (so scene feels alive)
-  for(const m of monsters){
-    m.mesh.position.x += (Math.random()-0.5) * dt * 0.06;
-    m.mesh.position.z += (Math.random()-0.5) * dt * 0.06;
+// ---------- HUD helpers ----------
+function HUD_elem_setWidth(el, pct){
+  if(!el) return;
+  el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+function updateHealthUI(){
+  HUD.healthText.textContent = Math.max(0, Math.floor(STATE.player.health));
+  HUD.healthBar.style.width = `${(STATE.player.health / CONFIG.player.maxHealth) * 100}%`;
+  const p = (STATE.player.health / CONFIG.player.maxHealth) * 100;
+  if(p > 65) HUD.healthBar.style.background = 'linear-gradient(90deg,#33ff88,#66ff88,#88ffb3)';
+  else if(p > 35) HUD.healthBar.style.background = 'linear-gradient(90deg,#ffaa33,#ff8833,#ff6633)';
+  else HUD.healthBar.style.background = 'linear-gradient(90deg,#ff3333,#ff0000,#cc0000)';
+}
+
+// ---------- damage and victory ----------
+function damagePlayer(amount){
+  STATE.player.health = Math.max(0, STATE.player.health - amount);
+  updateHealthUI();
+  // flash red overlay
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.left = overlay.style.top = '0';
+  overlay.style.width = overlay.style.height = '100%';
+  overlay.style.background = 'radial-gradient(circle at center, transparent 40%, rgba(255,0,0,0.35) 100%)';
+  overlay.style.zIndex = 2500;
+  document.body.appendChild(overlay);
+  setTimeout(()=> overlay.remove(), 280);
+  playDamageTone();
+  if(STATE.player.health <= 0){
+    STATE.player.canMove = false;
+    showCenterMessage('💀 You died — press R to restart', true);
+  }
+}
+
+function victory(){
+  STATE.player.canMove = false;
+  showCenterMessage('⚔️ Victory — all enemies defeated! Press R to restart', true);
+}
+
+// ---------- audio tiny helper tones ----------
+let audioCtx = null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }
+  }
+}
+function playSwingTone(){ ensureAudio(); if(!audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='triangle'; o.frequency.value = 620; g.gain.value=0.06; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08); }
+function playHitTone(){ ensureAudio(); if(!audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sawtooth'; o.frequency.value = 220; g.gain.value=0.12; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12); }
+function playDamageTone(){ ensureAudio(); if(!audioCtx) return; const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type='sawtooth'; o.frequency.value = 160; g.gain.value=0.09; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.18); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.18); }
+
+// ---------- center message ----------
+function showCenterMessage(text, autoHide=false){
+  if(!HUD.centerMessage) return;
+  HUD.centerMessage.innerHTML = text;
+  HUD.centerMessage.style.display = 'block';
+  if(autoHide) setTimeout(()=> HUD.centerMessage.style.display='none', 2600);
+}
+
+// ---------- minimap render ----------
+const minimapCanvas = document.getElementById('minimapCanvas');
+const miniCtx = minimapCanvas.getContext('2d');
+function drawMinimap(){
+  const w = minimapCanvas.width, h = minimapCanvas.height;
+  miniCtx.clearRect(0,0,w,h);
+  miniCtx.fillStyle = '#061018'; miniCtx.fillRect(0,0,w,h);
+  const cell = w / maze.w;
+  // walls
+  miniCtx.fillStyle = '#26303a';
+  for(let z=0; z<maze.h; z++){
+    for(let x=0; x<maze.w; x++){
+      if(maze.grid[z][x] === '#') miniCtx.fillRect(x*cell, z*cell, cell, cell);
+    }
+  }
+  // monsters
+  miniCtx.fillStyle = '#ff7b7b';
+  MONSTERS.forEach(m=>{
+    const mx = ((m.mesh.position.x / CONFIG.cell) + maze.w/2) * cell;
+    const mz = ((m.mesh.position.z / CONFIG.cell) + maze.h/2) * cell;
+    miniCtx.beginPath(); miniCtx.arc(mx, mz, 3, 0, Math.PI*2); miniCtx.fill();
+  });
+  // player
+  const px = ((camera.position.x / CONFIG.cell) + maze.w/2) * cell;
+  const pz = ((camera.position.z / CONFIG.cell) + maze.h/2) * cell;
+  miniCtx.fillStyle = '#7edb9a';
+  miniCtx.beginPath(); miniCtx.arc(px, pz, 4, 0, Math.PI*2); miniCtx.fill();
+  // direction line
+  miniCtx.strokeStyle = '#7edb9a'; miniCtx.lineWidth = 2;
+  miniCtx.beginPath(); miniCtx.moveTo(px, pz); miniCtx.lineTo(px + Math.sin(STATE.player.yaw)*12, pz - Math.cos(STATE.player.yaw)*12); miniCtx.stroke();
+}
+
+// ---------- Mural: try to load uploaded image and apply to a random wall ----------
+(function tryMural(){
+  const img = new Image();
+  img.onload = () => {
+    const tex = new THREE.CanvasTexture(img);
+    if(WALLS && WALLS.length > 0){
+      const idx = Math.floor(Math.random() * WALLS.length);
+      const wall = WALLS[idx].mesh;
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cell*0.7, CONFIG.cell*0.7), new THREE.MeshBasicMaterial({ map: tex, transparent:true }));
+      plane.position.set(0, CONFIG.cell*0.45, CONFIG.cell*0.51);
+      wall.add(plane);
+    }
+  };
+  img.onerror = ()=> { /* ignore gracefully */ };
+  img.src = LOCAL_MURAL;
+})();
+
+// ---------- Background texture loading (non-blocking) ----------
+setTimeout(()=> {
+  const loader = new THREE.TextureLoader();
+  loader.load('https://i.imgur.com/yY6tjqm.jpeg', t => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20,20);
+    floor.material.map = t; floor.material.needsUpdate = true;
+  }, undefined, ()=>{});
+  loader.load('https://i.imgur.com/Jd2NPFf.jpeg', t => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    WALLS.forEach(w => { w.mesh.material = new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 }); });
+  }, undefined, ()=>{});
+  // hide loading overlay after short delay
+  setTimeout(()=> { if(HUD.loading) HUD.loading.style.display = 'none'; showCenterMessage('Click canvas to lock pointer and play', true); }, 420);
+}, 80);
+
+// ---------- Spawn more particles to enrich scene gradually ----------
+setTimeout(()=> { for(let i=0;i<40;i++) spawnHitParticles((Math.random()-0.5)*120, Math.random()*2.5+0.2, (Math.random()-0.5)*120); }, 900);
+
+// ---------- main loop ----------
+const clock = new THREE.Clock();
+let frames = 0, accum = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.06);
+
+  // movement & updates
+  movePlayer(dt);
+  updateSword(dt);
+  updateMonsters(dt);
+  updateParticles(dt);
+  drawMinimap();
+
+  // HUD updates (fps)
+  frames++; accum += dt;
+  if(accum > 0.5){
+    HUD.fps.textContent = Math.round(frames / accum);
+    frames = 0; accum = 0;
   }
 
   renderer.render(scene, camera);
-
-  // FPS update
-  frameCount++; fpsAccum += dt;
-  if(fpsAccum > 0.5){ hudFPS.textContent = Math.round(frameCount / fpsAccum); frameCount=0; fpsAccum=0; }
-
-  requestAnimationFrame(renderFrame);
 }
-requestAnimationFrame(renderFrame);
+animate();
 
-// === BACKGROUND: after initial frame, load better assets and features ===
-function backgroundLoad() {
-  // 1) Improve shadows resolution and light detail
-  sun.shadow.mapSize.set(CONFIG.shadowSizeHigh, CONFIG.shadowSizeHigh);
-
-  // 2) Load nicer remote textures but only after first frame (non-blocking)
-  const tl = new THREE.TextureLoader();
-  tl.load(
-    'https://i.imgur.com/yY6tjqm.jpeg', tex => { floor.material.map = tex; floor.material.needsUpdate = true; tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(20,20); },
-    undefined,
-    () => { /* ignore load errors, keep fast canvas texture */ }
-  );
-  tl.load(
-    'https://i.imgur.com/Jd2NPFf.jpeg', tex => {
-      // Replace wall material smoothly: clone old meshes material to keep GPU stable
-      walls.forEach(w => { w.mesh.material = new THREE.MeshStandardMaterial({ map:tex, roughness:0.9 }); });
-      tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-    }, undefined, ()=>{}
-  );
-
-  // 3) Add more atmospheric particles (gradual)
-  setTimeout(()=> {
-    for(let i=0;i<CONFIG.particleCountFull - CONFIG.particleCountInitial; i++){
-      const x = (Math.random() - 0.5) * 180;
-      const y = Math.random() * 3;
-      const z = (Math.random() - 0.5) * 180;
-      spawnParticle(x,y,z);
-    }
-  }, 600);
-
-  // 4) Replace monster boxes with richer models (simple swap)
-  setTimeout(()=> {
-    monsters.forEach(mon => {
-      // create a slightly better mesh and swap
-      const newMesh = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.cell*0.42, CONFIG.cell*0.95, CONFIG.cell*0.42),
-        new THREE.MeshStandardMaterial({ color: 0xff6b6b, roughness:0.8, metalness:0.1 }));
-      newMesh.position.copy(mon.mesh.position);
-      scene.remove(mon.mesh);
-      scene.add(newMesh);
-      mon.mesh = newMesh;
-    });
-  }, 700);
-
-  // 5) Optionally use uploaded local path (if your environment serves it)
-  //    We just attempt to load it as an image and set it to gem or decoration if it succeeds.
-  const img = new Image();
-  img.onload = () => {
-    // we won't crash if it fails — this is optional
-    const tex = new THREE.CanvasTexture(img);
-    // put as emissive decal on some random wall to show the image
-    if(walls.length > 0){
-      const target = walls[Math.floor(Math.random()*walls.length)].mesh;
-      const plane = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.cell*0.6, CONFIG.cell*0.6), new THREE.MeshBasicMaterial({ map:tex, transparent:true }));
-      plane.position.set(0, CONFIG.cell*0.4, CONFIG.cell*0.52);
-      target.add(plane);
-    }
-  };
-  img.onerror = ()=>{/* ignore */};
-  img.src = uploadedLocalPath;
-
-  // 6) Hide loading overlay now — we waited a tiny bit (keeps first frame)
-  setTimeout(()=> {
-    loadingEl.classList.add('small');
-    // fully hide after short fade (we just remove display)
-    setTimeout(()=> loadingEl.style.display='none', 300);
-  }, 120);
-
-  // 7) enable some more gameplay logic (attack handling, cleanup) — simple example:
-  window.addEventListener('mousedown', (e) => {
-    if(e.button!==0) return;
-    if(sword.cooldown > 0) return;
-    // create fast visible trail and small hit test on monsters
-    sword.cooldown = 0.45;
-    // small particle burst in front of player
-    const forward = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-    const hitX = camera.position.x + forward.x * 1.2;
-    const hitZ = camera.position.z + forward.z * 1.2;
-    spawnParticle(hitX, camera.position.y - 0.6, hitZ);
-    // simple check: kill nearest monster within range
-    for(let i=monsters.length-1;i>=0;i--){
-      const m = monsters[i];
-      const d = Math.hypot(m.mesh.position.x - camera.position.x, m.mesh.position.z - camera.position.z);
-      if(d < 2.0){ scene.remove(m.mesh); monsters.splice(i,1); hudEnemies.textContent = monsters.length; break; }
-    }
-  });
+// ---------- spawn initial particle, helpers ----------
+function spawnHitParticles(x,y,z){
+  for(let i=0;i<10;i++){
+    const geo = new THREE.SphereGeometry(0.04, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color:0xffc6b0, transparent:true, opacity:1 });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x,y,z);
+    m._vel = new THREE.Vector3((Math.random()-0.5)*1.6, Math.random()*1.6+0.4, (Math.random()-0.5)*1.6);
+    m._life = 0.9 + Math.random()*0.6;
+    scene.add(m); PARTICLES.push(m);
+  }
 }
 
-// schedule background load (not blocking)
-setTimeout(backgroundLoad, 80);
-
-// Utility: show message
-function showMessage(text, time=3000){
-  msgBox.style.display='block'; msgBox.innerHTML = text;
-  if(time>0) setTimeout(()=> msgBox.style.display='none', time);
+// ---------- restart ----------
+function restart(){
+  // clear
+  MONSTERS.forEach(m => { if(m.mesh) scene.remove(m.mesh); });
+  MONSTERS = []; PARTICLES.forEach(p => scene.remove(p)); PARTICLES = [];
+  // regenerate maze
+  maze.generate();
+  const b = maze.build(scene);
+  WALLS = b.walls;
+  camera.position.set(b.offsetX + CONFIG.cell, CONFIG.player.height, b.offsetZ + CONFIG.cell);
+  spawnMonsters(CONFIG.monster.count);
+  STATE.player.health = CONFIG.player.maxHealth;
+  HUD.healthText.textContent = STATE.player.health;
+  HUD.enemies.textContent = MONSTERS.length;
+  showCenterMessage('Restarted — click to lock pointer and play', true);
 }
 
-// Quick explanation available to user
-console.log("Fast-start Dungeon Maze initialized. Background assets are loading asynchronously.");
+// expose restart globally for convenience
+window.restart = restart;
 
-// show a brief message then hide
-showMessage('Click canvas and move. Heavy assets load in the background.', 2400);
+// set initial HUD values
+HUD.healthText.textContent = STATE.player.health;
+HUD.enemies.textContent = MONSTERS.length;
+HUD.score.textContent = 0;
+HUD.level.textContent = 1;
+
+// small helper to show a one-time message if user isn't seeing pointer lock
+setTimeout(()=> {
+  if(document.pointerLockElement !== renderer.domElement) {
+    showCenterMessage('Tip: Click the screen to lock the mouse and play', true);
+  } else {
+    HUD.loading.style.display = 'none';
+  }
+}, 1100);
+
 </script>
 </body>
 </html>
