@@ -376,6 +376,15 @@
                     else if (storyState === 'victory') setGameState("won");
                 }
             };
+            // --- VISION FIX: Recalculate path when Admin Vision is ON ---
+            useEffect(() => {
+                if (isVisionUnlimited && maze.length > 0) {
+                    const path = solveMaze(maze, playerPos, {x: maze[0].length-1, y: maze.length-1});
+                    setSolutionPath(path);
+                } else if (!isVisionUnlimited) {
+                    setSolutionPath(undefined);
+                }
+            }, [isVisionUnlimited, playerPos, maze]);
             useEffect(() => {
                 if (level === 25 && gameState === "playing" && storyState === 'none') {
                     const chaosInterval = setInterval(() => {
@@ -481,6 +490,7 @@
             const nextLevel = () => {
                 setCoins(c => c + 10); toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
                 const nextLvl = level + 1;
+                // Fixed: Packs every 3 levels
                 if (nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
                 if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
                 if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
@@ -685,7 +695,8 @@
             const toast = useCallback(({ title, description, className, variant }) => {
                 const id = Date.now();
                 setToasts(prev => [...prev, { id, title, description, className, variant }]);
-                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+                // Fixed: 2 seconds duration for notifications
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2000);
             }, []);
             return (
                 <ToastContext.Provider value={{ toasts, toast }}>
