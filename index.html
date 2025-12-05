@@ -695,8 +695,8 @@
             const toast = useCallback(({ title, description, className, variant }) => {
                 const id = Date.now();
                 setToasts(prev => [...prev, { id, title, description, className, variant }]);
-                // Fixed: 2 seconds duration for notifications
-                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2000);
+                // Fixed: 1 second duration for notifications
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 1000);
             }, []);
             return (
                 <ToastContext.Provider value={{ toasts, toast }}>
