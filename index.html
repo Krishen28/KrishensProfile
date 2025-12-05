@@ -502,7 +502,7 @@
             };
             const buyPowerUp = (type, cost) => {
                 if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
-                setCoins(c => c - cost); spawnPowerUp(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
+                setCoins(c => c - cost); spawnPowerUpNearPlayer(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
             };
             const buySkipLevel = () => {
                 const cost = 150;
@@ -511,7 +511,69 @@
             };
             const restart = () => { setLevel(1); setCoins(0); initLevel(1); };
             const retry = () => { initLevel(level); };
-            const handleAdminLogin = () => { if (adminPassword === ADMIN_CODE) { setIsAdminAuthenticated(true); toast({ title: "Access Granted", description: "Welcome Commander.", className: "bg-red-900 border-red-500 text-red-100" }); } else toast({ variant: "destructive", title: "Access Denied" }); };
+            
+            const handleAdminLogin = () => { 
+                if (adminPassword === ADMIN_CODE) { 
+                    setIsAdminAuthenticated(true); 
+                    setUnlockedSkins(Object.keys(SKIN_RARITIES));
+                    toast({ title: "Access Granted", description: "Welcome Commander. All skins unlocked.", className: "bg-red-900 border-red-500 text-red-100" }); 
+                } else {
+                    toast({ variant: "destructive", title: "Access Denied" }); 
+                }
+            };
+            
+            const spawnPowerUpNearPlayer = (type) => {
+                if (!maze.length) return;
+                const { x, y } = playerPos;
+                // Find accessible neighbors
+                const neighbors = [];
+                const currentCell = maze[y][x];
+                
+                if (!currentCell.top && y > 0) neighbors.push({ x, y: y - 1 });
+                if (!currentCell.bottom && y < maze.length - 1) neighbors.push({ x, y: y + 1 });
+                if (!currentCell.left && x > 0) neighbors.push({ x: x - 1, y });
+                if (!currentCell.right && x < maze[0].length - 1) neighbors.push({ x: x + 1, y });
+                
+                // Shuffle to pick a random accessible neighbor
+                for (let i = neighbors.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [neighbors[i], neighbors[j]] = [neighbors[j], neighbors[i]];
+                }
+                
+                let placed = false;
+                for (const n of neighbors) {
+                    if (!maze[n.y][n.x].item) {
+                        const newMaze = [...maze];
+                        newMaze[n.y][n.x] = { ...newMaze[n.y][n.x], item: type };
+                        setMaze(newMaze);
+                        placed = true;
+                        break;
+                    }
+                }
+                
+                // If no accessible neighbor empty, try any neighbor
+                if (!placed) {
+                    const allNeighbors = [
+                        { x: x, y: y - 1 }, { x: x, y: y + 1 }, { x: x - 1, y }, { x: x + 1, y }
+                    ].filter(n => n.x >= 0 && n.x < maze[0].length && n.y >= 0 && n.y < maze.length);
+                    
+                    for (const n of allNeighbors) {
+                        if (!maze[n.y][n.x].item) {
+                            const newMaze = [...maze];
+                            newMaze[n.y][n.x] = { ...newMaze[n.y][n.x], item: type };
+                            setMaze(newMaze);
+                            placed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (placed) {
+                    toast({ title: "Item Spawned", description: `${type} appeared nearby!`, className: "bg-slate-800 border-slate-600 text-white" });
+                } else {
+                    spawnPowerUp(type); // Fallback to random if somehow completely blocked
+                }
+            };
             const spawnPowerUp = (type) => {
                 if (!maze.length) return;
                 const newMaze = [...maze];
