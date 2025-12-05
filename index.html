@@ -462,7 +462,11 @@
                         }
                         if (nextX === maze[0].length - 1 && nextY === maze.length - 1) {
                             if (level === 25) setStoryState('victory');
-                            else { setShowCutscene(true); setTimeout(() => { setShowCutscene(false); setGameState("won"); }, 1000); }
+                            else { 
+                                // FIXED: Instant reaction time (0ms delay)
+                                setShowCutscene(true); 
+                                setTimeout(() => { setShowCutscene(false); setGameState("won"); }, 0); 
+                            }
                         }
                     }
                 };
@@ -490,7 +494,6 @@
             const nextLevel = () => {
                 setCoins(c => c + 10); toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
                 const nextLvl = level + 1;
-                // Fixed: Packs every 3 levels
                 if (nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
                 if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
                 if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
@@ -527,8 +530,8 @@
                     
                     {/* --- LAYOUT MATCHING SCREENSHOT --- */}
                     
-                    {/* LEVEL INDICATOR (Left) */}
-                    <div className="absolute left-[15%] top-[25%] flex flex-col items-start z-10">
+                    {/* LEVEL INDICATOR (Left) - FIXED POSITION */}
+                    <div className="absolute left-8 top-1/2 -translate-y-1/2 flex flex-col items-start z-30 pointer-events-none">
                         <h2 className="text-neon-purple text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">LEVEL</h2>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center justify-center w-8 h-8 bg-yellow-900/40 border border-yellow-600/50 rounded">
@@ -540,15 +543,15 @@
                             <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
                         </div>
                     </div>
-                    {/* TIME INDICATOR (Right) */}
-                    <div className="absolute right-[15%] top-[25%] flex flex-col items-end z-10">
+                    {/* TIME INDICATOR (Right) - FIXED POSITION */}
+                    <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-end z-30 pointer-events-none">
                         <h2 className="text-neon-pink text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">TIME</h2>
                         <div className="text-4xl font-press text-white text-glow-white">
                             {Math.floor(timeLeft)}s
                         </div>
                     </div>
-                    {/* MAZE (Center) */}
-                    <div className="relative z-20 scale-125">
+                    {/* MAZE (Center) - FIXED MAX SIZE TO PREVENT OVERLAP */}
+                    <div className="relative z-20 max-w-[60vw] max-h-[70vh] flex items-center justify-center">
                         <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
                     </div>
                     {/* BOTTOM CONTROLS - FIXED VISIBILITY */}
@@ -694,7 +697,9 @@
             const [toasts, setToasts] = useState([]);
             const toast = useCallback(({ title, description, className, variant }) => {
                 const id = Date.now();
+                // Fixed: limit to 3 toasts
                 setToasts(prev => [...prev, { id, title, description, className, variant }].slice(-3));
+                // Fixed: 1.5s duration
                 setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 1500);
             }, []);
             return (
