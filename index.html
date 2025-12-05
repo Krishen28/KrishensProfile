@@ -3,180 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Labyrinth - Portable Version</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
+    <title>STONE LABYRINTH - Portable</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'neon-cyan': 'hsl(180, 100%, 50%)',
-                        'neon-pink': 'hsl(320, 100%, 50%)',
-                        'neon-purple': 'hsl(270, 100%, 60%)',
-                        background: 'hsl(240, 20%, 3%)',
+                        'neon-cyan': '#00ffff',
+                        'neon-pink': '#ff00ff',
+                        'neon-purple': '#a855f7',
                     },
                     fontFamily: {
-                        'press': ['"Press Start 2P"', 'cursive'],
+                        'press': ['"Press Start 2P"', 'system-ui'],
                         'mono': ['"Space Mono"', 'monospace'],
+                    },
+                    animation: {
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite',
+                    },
+                    keyframes: {
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0) rotate(-1deg)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0) rotate(2deg)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0) rotate(-4deg)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0) rotate(4deg)' }
+                        }
                     }
                 }
             }
         }
     </script>
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        .text-glow { text-shadow: 0 0 10px currentColor; }
-        .scanline {
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.2) 50%,
-                rgba(0,0,0,0.2)
-            );
-            background-size: 100% 4px;
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 50;
-        }
         body {
-            background-color: hsl(240, 20%, 3%);
-            color: white;
+            background-color: #050510;
+            color: #e0f7fa;
+            background-image: radial-gradient(circle at center, hsla(270, 50%, 10%, 0.5) 0%, transparent 100%);
         }
-        @keyframes bounce-slow {
-            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
-            50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
-        }
-        .animate-bounce-slow {
-            animation: bounce-slow 1s infinite;
-        }
-        .typing-effect::after {
-            content: '|';
-            animation: blink 1s infinite;
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .text-glow { text-shadow: 0 0 10px currentColor; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo, useRef } = React;
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const { motion, AnimatePresence } = window.Motion;
         // --- ICONS ---
-        const Icon = ({ d, className, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
-                <path d={d} />
-            </svg>
+        const Icon = ({ name, size = 24, className, ...props }) => {
+            const iconData = lucide.icons[name];
+            if (!iconData) return null;
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+                    {iconData.map((child, index) => {
+                        const [tag, attrs] = child;
+                        return React.createElement(tag, { ...attrs, key: index });
+                    })}
+                </svg>
+            );
+        };
+        const Zap = (p) => <Icon name="Zap" {...p} />;
+        const Clock = (p) => <Icon name="Clock" {...p} />;
+        const Eye = (p) => <Icon name="Eye" {...p} />;
+        const Ghost = (p) => <Icon name="Ghost" {...p} />;
+        const Box = (p) => <Icon name="Box" {...p} />;
+        const Triangle = (p) => <Icon name="Triangle" {...p} />;
+        const Circle = (p) => <Icon name="Circle" {...p} />;
+        const Sword = (p) => <Icon name="Sword" {...p} />;
+        const Star = (p) => <Icon name="Star" {...p} />;
+        const Crown = (p) => <Icon name="Crown" {...p} />;
+        const Snowflake = (p) => <Icon name="Snowflake" {...p} />;
+        const Footprints = (p) => <Icon name="Footprints" {...p} />;
+        const Gem = (p) => <Icon name="Gem" {...p} />;
+        const Heart = (p) => <Icon name="Heart" {...p} />;
+        const Moon = (p) => <Icon name="Moon" {...p} />;
+        const Sun = (p) => <Icon name="Sun" {...p} />;
+        const Flame = (p) => <Icon name="Flame" {...p} />;
+        const Skull = (p) => <Icon name="Skull" {...p} />;
+        const Trophy = (p) => <Icon name="Trophy" {...p} />;
+        const Timer = (p) => <Icon name="Timer" {...p} />;
+        const RefreshCw = (p) => <Icon name="RefreshCw" {...p} />;
+        const ArrowLeft = (p) => <Icon name="ArrowLeft" {...p} />;
+        const Lock = (p) => <Icon name="Lock" {...p} />;
+        const Unlock = (p) => <Icon name="Unlock" {...p} />;
+        const ShieldAlert = (p) => <Icon name="ShieldAlert" {...p} />;
+        const Palette = (p) => <Icon name="Palette" {...p} />;
+        const SkipForward = (p) => <Icon name="SkipForward" {...p} />;
+        const Package = (p) => <Icon name="Package" {...p} />;
+        const ShoppingCart = (p) => <Icon name="ShoppingCart" {...p} />;
+        const Coins = (p) => <Icon name="Coins" {...p} />;
+        const X = (p) => <Icon name="X" {...p} />;
+        // --- UI COMPONENTS ---
+        const Button = ({ children, className, variant = "default", size = "default", ...props }) => {
+            const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+            const variants = {
+                default: "bg-white text-black hover:bg-gray-200",
+                destructive: "bg-red-900 text-white hover:bg-red-800",
+                outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
+                secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                ghost: "hover:bg-accent hover:text-accent-foreground",
+            };
+            const sizes = { default: "h-9 px-4 py-2", sm: "h-8 rounded-md px-3 text-xs", lg: "h-10 rounded-md px-8", icon: "h-9 w-9" };
+            return <button className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>{children}</button>;
+        };
+        const Card = ({ className, ...props }) => <div className={`rounded-xl border bg-card text-card-foreground shadow ${className}`} {...props} />;
+        const Input = ({ className, ...props }) => <input className={`flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${className}`} {...props} />;
+        const Switch = ({ checked, onCheckedChange, className }) => (
+            <button role="switch" aria-checked={checked} onClick={() => onCheckedChange(!checked)} className={`peer inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-green-500' : 'bg-gray-700'} ${className}`}>
+                <span className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-4 bg-white' : 'translate-x-0 bg-white'}`} />
+            </button>
         );
-        const Zap = (props) => <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" {...props} />;
-        const Clock = (props) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-14v6l4 2" {...props} />;
-        const Eye = (props) => <Icon d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" {...props} />;
-        const Trophy = (props) => <Icon d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 0h1.5a2.5 2.5 0 0 1 0 5H18M4 22h16v-3h-2V9a6 6 0 1 0-12 0v10H4v3zm2-16h12" {...props} />;
-        const TimerIcon = (props) => <Icon d="M12 2v20M2 12h20" {...props} />;
-        const ArrowLeft = (props) => <Icon d="M19 12H5M12 19l-7-7 7-7" {...props} />;
-        const Lock = (props) => <Icon d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zm-7-4a4 4 0 0 1 4 4v4h-8v-4a4 4 0 0 1 4-4z" {...props} />;
-        const Unlock = (props) => <Icon d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zm-7-4a4 4 0 0 1 4 4v4h-2v-4a2 2 0 1 0-4 0v4h-2v-4a4 4 0 0 1 8 0z" {...props} />;
-        const ShieldAlert = (props) => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM12 8v4M12 16h.01" {...props} />;
-        const Skull = (props) => <Icon d="M12 2a7 7 0 0 0-7 7v3c0 2 1.5 3 2 4 .5 1 1.5 2 2.5 2h5c1 0 2-1 2.5-2 .5-1 2-2 2-4V9a7 7 0 0 0-7-7zm-2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm4 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" {...props} />;
-        const Palette = (props) => <Icon d="M13.5 22H7a5 5 0 0 1-5-5V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2-2h-4.5zM16.5 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM11.5 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM6.5 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" {...props} />;
-        const SkipForward = (props) => <Icon d="M5 4l10 8-10 8V4z M19 5v14" {...props} />;
-        const Volume2 = (props) => <Icon d="M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 0 1 0 14.14 M15.54 8.46a5 5 0 0 1 0 7.07" {...props} />;
-        const VolumeX = (props) => <Icon d="M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6" {...props} />;
-        const Ghost = (props) => <Icon d="M9 22l2-2 2 2 2-2 2 2V9a9 9 0 0 0-18 0v13l2-2 2 2zM9 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM15 10a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" {...props} />;
-        const Box = (props) => <Icon d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12" {...props} />;
-        const Triangle = (props) => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" {...props} />;
-        const Circle = (props) => <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} {...props}><circle cx="12" cy="12" r="10" /></svg>;
-        
-        const Sword = (props) => <Icon d="M14.5 17.5L3 6V3h3l11.5 11.5m-5 5L21 21l-1.5-1.5L19 19m-2-2l1.5-1.5L17 14" {...props} />;
-        const Star = (props) => <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" {...props} />;
-        const Crown = (props) => <Icon d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" {...props} />;
+        const Dialog = ({ open, onOpenChange, children }) => {
+            if (!open) return null;
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        {React.Children.map(children, child => {
+                            if (child.type === DialogTrigger) return null;
+                            return React.cloneElement(child, { onClose: () => onOpenChange(false) });
+                        })}
+                    </div>
+                    <div className="absolute inset-0 -z-10" onClick={() => onOpenChange(false)}></div>
+                </div>
+            );
+        };
+        const DialogTrigger = ({ children, onClick }) => React.cloneElement(children, { onClick });
+        const DialogContent = ({ children, className, onClose }) => (
+            <div className={`grid w-full gap-4 border bg-background p-6 shadow-lg sm:rounded-lg ${className}`}>
+                {children}
+                <button onClick={onClose} className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none"><X size={16} /><span className="sr-only">Close</span></button>
+            </div>
+        );
+        const DialogHeader = ({ className, ...props }) => <div className={`flex flex-col space-y-1.5 text-center sm:text-left ${className}`} {...props} />;
+        const DialogTitle = ({ className, ...props }) => <h2 className={`text-lg font-semibold leading-none tracking-tight ${className}`} {...props} />;
+        const DialogDescription = ({ className, ...props }) => <p className={`text-sm text-muted-foreground ${className}`} {...props} />;
+        // Toast System
+        const ToastContext = React.createContext({});
+        const useToast = () => React.useContext(ToastContext);
+        const Toaster = () => {
+            const { toasts } = useToast();
+            return (
+                <div className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
+                    {toasts.map(t => (
+                        <div key={t.id} className={`group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all ${t.className || 'bg-background text-foreground'}`}>
+                            <div className="grid gap-1">
+                                {t.title && <div className="text-sm font-semibold">{t.title}</div>}
+                                {t.description && <div className="text-sm opacity-90">{t.description}</div>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
         // --- MAZE LOGIC ---
         function generateMaze(width, height) {
             const grid = [];
             for (let y = 0; y < height; y++) {
                 const row = [];
-                for (let x = 0; x < width; x++) {
-                    row.push({ x, y, top: true, right: true, bottom: true, left: true, visited: false });
-                }
+                for (let x = 0; x < width; x++) { row.push({ x, y, top: true, right: true, bottom: true, left: true, visited: false }); }
                 grid.push(row);
             }
             const stack = [];
             const start = grid[0][0];
             start.visited = true;
             stack.push(start);
+            function getUnvisitedNeighbors(cell) {
+                const neighbors = [];
+                const { x, y } = cell;
+                if (y > 0 && !grid[y - 1][x].visited) neighbors.push(grid[y - 1][x]);
+                if (x < width - 1 && !grid[y][x + 1].visited) neighbors.push(grid[y][x + 1]);
+                if (y < height - 1 && !grid[y + 1][x].visited) neighbors.push(grid[y + 1][x]);
+                if (x > 0 && !grid[y][x - 1].visited) neighbors.push(grid[y][x - 1]);
+                return neighbors;
+            }
+            function removeWalls(a, b) {
+                const xDiff = a.x - b.x;
+                const yDiff = a.y - b.y;
+                if (xDiff === 1) { a.left = false; b.right = false; } else if (xDiff === -1) { a.right = false; b.left = false; }
+                if (yDiff === 1) { a.top = false; b.bottom = false; } else if (yDiff === -1) { a.bottom = false; b.top = false; }
+            }
             while (stack.length > 0) {
                 const current = stack[stack.length - 1];
-                const neighbors = getUnvisitedNeighbors(current, grid, width, height);
+                const neighbors = getUnvisitedNeighbors(current);
                 if (neighbors.length > 0) {
                     const next = neighbors[Math.floor(Math.random() * neighbors.length)];
                     removeWalls(current, next);
                     next.visited = true;
                     stack.push(next);
-                } else {
-                    stack.pop();
-                }
+                } else { stack.pop(); }
             }
-            // Items
             const itemCount = Math.max(1, Math.floor((width * height) / 40));
             for (let i = 0; i < itemCount; i++) {
                 let placed = false;
-                while (!placed) {
+                let attempts = 0;
+                while (!placed && attempts < 100) {
                     const x = Math.floor(Math.random() * width);
                     const y = Math.floor(Math.random() * height);
                     if ((x === 0 && y === 0) || (x === width - 1 && y === height - 1)) continue;
                     if (grid[y][x].item) continue;
-                    
                     const rand = Math.random();
-                    if (rand < 0.33) grid[y][x].item = 'speed';
-                    else if (rand < 0.66) grid[y][x].item = 'time';
-                    else grid[y][x].item = 'vision';
+                    if (rand < 0.25) grid[y][x].item = 'speed';
+                    else if (rand < 0.5) grid[y][x].item = 'time';
+                    else if (rand < 0.7) grid[y][x].item = 'vision';
+                    else if (rand < 0.85) grid[y][x].item = 'ghost';
+                    else grid[y][x].item = 'freeze';
                     placed = true;
+                    attempts++;
                 }
             }
             return grid;
         }
-        function getUnvisitedNeighbors(cell, grid, width, height) {
-            const neighbors = [];
-            const { x, y } = cell;
-            if (y > 0 && !grid[y - 1][x].visited) neighbors.push(grid[y - 1][x]);
-            if (x < width - 1 && !grid[y][x + 1].visited) neighbors.push(grid[y][x + 1]);
-            if (y < height - 1 && !grid[y + 1][x].visited) neighbors.push(grid[y + 1][x]);
-            if (x > 0 && !grid[y][x - 1].visited) neighbors.push(grid[y][x - 1]);
-            return neighbors;
-        }
-        function removeWalls(a, b) {
-            const xDiff = a.x - b.x;
-            const yDiff = a.y - b.y;
-            if (xDiff === 1) { a.left = false; b.right = false; }
-            else if (xDiff === -1) { a.right = false; b.left = false; }
-            if (yDiff === 1) { a.top = false; b.bottom = false; }
-            else if (yDiff === -1) { a.bottom = false; b.top = false; }
-        }
         function solveMaze(grid, start, end) {
-            const queue = [{ ...start, path: [start] }];
-            const visited = new Set([`${start.x},${start.y}`]);
-            
+            const queue = [];
+            const visited = new Set();
+            queue.push({ ...start, path: [start] });
+            visited.add(`${start.x},${start.y}`);
             while (queue.length > 0) {
                 const { x, y, path } = queue.shift();
                 if (x === end.x && y === end.y) return path;
-                
                 const current = grid[y][x];
                 const neighbors = [];
-                if (!current.top && y > 0) neighbors.push({x, y: y - 1});
-                if (!current.bottom && y < grid.length - 1) neighbors.push({x, y: y + 1});
-                if (!current.left && x > 0) neighbors.push({x: x - 1, y});
-                if (!current.right && x < grid[0].length - 1) neighbors.push({x: x + 1, y});
-                
+                if (!current.top && y > 0) neighbors.push({ x, y: y - 1 });
+                if (!current.bottom && y < grid.length - 1) neighbors.push({ x, y: y + 1 });
+                if (!current.left && x > 0) neighbors.push({ x: x - 1, y });
+                if (!current.right && x < grid[0].length - 1) neighbors.push({ x: x + 1, y });
                 for (const n of neighbors) {
                     const key = `${n.x},${n.y}`;
                     if (!visited.has(key)) {
@@ -187,166 +246,157 @@
             }
             return [];
         }
-        // --- COMPONENTS ---
-        function BackgroundMusic() {
-            const [isPlaying, setIsPlaying] = useState(false);
-            const [isMuted, setIsMuted] = useState(false);
-            const audioRef = useRef(null);
-            useEffect(() => {
-                const audio = new Audio("https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg");
-                audio.loop = true;
-                audio.volume = 0.4;
-                audioRef.current = audio;
-                audio.play().then(() => setIsPlaying(true)).catch(e => console.log("Autoplay blocked", e));
-                return () => { audio.pause(); };
-            }, []);
-            useEffect(() => {
-                if (audioRef.current) audioRef.current.muted = isMuted;
-            }, [isMuted]);
-            const toggleMute = () => {
-                setIsMuted(!isMuted);
-                if (!isPlaying && audioRef.current) audioRef.current.play().then(() => setIsPlaying(true));
-            };
-            return (
-                <button onClick={toggleMute} className="fixed bottom-4 right-4 z-50 p-2 bg-black/50 border border-neon-cyan/30 rounded text-neon-cyan hover:bg-neon-cyan/20">
-                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                </button>
-            );
-        }
-        function MazeRenderer({ maze, cellSize, playerPos, solutionPath, isSpeedActive, skin }) {
+        const SKIN_RARITIES = {
+            'orb': 'Common', 'cube': 'Common', 'triangle': 'Common',
+            'diamond': 'Uncommon', 'heart': 'Uncommon',
+            'star': 'Rare', 'moon': 'Rare',
+            'lightning': 'Epic', 'sun': 'Epic',
+            'crown': 'Legendary', 'skull': 'Legendary',
+            'ghost': 'Mythic', 'flame': 'Mythic',
+            'slayer': 'Special', 'ninja': 'Special', 'master': 'Special'
+        };
+        function MazeRenderer({ maze, cellSize, playerPos, solutionPath, isSpeedActive, skin = 'orb' }) {
             const width = maze[0].length * cellSize;
             const height = maze.length * cellSize;
             const paths = useMemo(() => {
                 const wallPaths = [];
-                maze.forEach(row => row.forEach(cell => {
-                    const x = cell.x * cellSize;
-                    const y = cell.y * cellSize;
-                    if (cell.top) wallPaths.push(`M${x},${y} L${x + cellSize},${y}`);
-                    if (cell.left) wallPaths.push(`M${x},${y} L${x},${y + cellSize}`);
-                    if (cell.right && cell.x === maze[0].length - 1) wallPaths.push(`M${x + cellSize},${y} L${x + cellSize},${y + cellSize}`);
-                    if (cell.bottom && cell.y === maze.length - 1) wallPaths.push(`M${x},${y + cellSize} L${x + cellSize},${y + cellSize}`);
-                }));
+                maze.forEach((row) => {
+                    row.forEach((cell) => {
+                        const x = cell.x * cellSize;
+                        const y = cell.y * cellSize;
+                        if (cell.top) wallPaths.push(`M${x},${y} L${x + cellSize},${y}`);
+                        if (cell.left) wallPaths.push(`M${x},${y} L${x},${y + cellSize}`);
+                        if (cell.right && cell.x === maze[0].length - 1) wallPaths.push(`M${x + cellSize},${y} L${x + cellSize},${y + cellSize}`);
+                        if (cell.bottom && cell.y === maze.length - 1) wallPaths.push(`M${x},${y + cellSize} L${x + cellSize},${y + cellSize}`);
+                    });
+                });
                 return wallPaths.join(" ");
             }, [maze, cellSize]);
             const solutionPathD = useMemo(() => {
-                if (!solutionPath || !solutionPath.length) return "";
+                if (!solutionPath || solutionPath.length === 0) return "";
                 return solutionPath.map((p, i) => {
                     const x = p.x * cellSize + cellSize / 2;
                     const y = p.y * cellSize + cellSize / 2;
                     return `${i === 0 ? 'M' : 'L'}${x},${y}`;
                 }).join(" ");
-            }, [solutionPath]);
-            const renderSkin = () => {
-                const props = { className: "text-neon-pink drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]", width: cellSize * 0.7, height: cellSize * 0.7, strokeWidth: 2.5 };
-                if (skin === 'cube') return <Box {...props} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />;
-                if (skin === 'triangle') return <Triangle {...props} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />;
-                if (skin === 'ghost') return <Ghost {...props} className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />;
-                
-                if (skin === 'slayer') return <Sword {...props} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />;
-                if (skin === 'ninja') return <Star {...props} className="text-purple-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />;
-                if (skin === 'master') return <Crown {...props} className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" />;
-                return <Circle {...props} className="text-neon-pink drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />;
+            }, [solutionPath, cellSize]);
+            const renderPlayerSkin = () => {
+                const commonProps = { className: "text-neon-pink drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]", size: cellSize * 0.7, strokeWidth: 2.5 };
+                switch (skin) {
+                    case 'cube': return <Box {...commonProps} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />;
+                    case 'triangle': return <Triangle {...commonProps} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />;
+                    case 'diamond': return <Gem {...commonProps} className="text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]" />;
+                    case 'heart': return <Heart {...commonProps} className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]" />;
+                    case 'star': return <Star {...commonProps} className="text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]" />;
+                    case 'moon': return <Moon {...commonProps} className="text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.8)]" />;
+                    case 'lightning': return <Zap {...commonProps} className="text-yellow-300 drop-shadow-[0_0_8px_rgba(253,224,71,0.8)]" />;
+                    case 'sun': return <Sun {...commonProps} className="text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />;
+                    case 'crown': return <Crown {...commonProps} className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" />;
+                    case 'skull': return <Skull {...commonProps} className="text-gray-200 drop-shadow-[0_0_8px_rgba(229,231,235,0.8)]" />;
+                    case 'ghost': return <Ghost {...commonProps} className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] opacity-80" />;
+                    case 'flame': return <Flame {...commonProps} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse" />;
+                    case 'slayer': return <Sword {...commonProps} className="text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]" />;
+                    case 'ninja': return <Star {...commonProps} className="text-purple-600 drop-shadow-[0_0_8px_rgba(147,51,234,0.8)]" />;
+                    case 'master': return <Crown {...commonProps} className="text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />;
+                    default: return <Circle {...commonProps} fill="currentColor" className="text-neon-pink drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />;
+                }
             };
             return (
                 <div className={`relative rounded-lg border-2 transition-colors duration-300 ${isSpeedActive ? 'border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)]' : 'border-neon-cyan/50 shadow-[0_0_30px_rgba(0,255,255,0.15)]'} bg-black/80 p-4 backdrop-blur-sm`}>
                     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-                        <defs>
-                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="2" result="blur" />
-                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                            </filter>
-                        </defs>
-                        {solutionPathD && <path d={solutionPathD} stroke="hsl(142, 70%, 50%)" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" className="pointer-events-none" />}
+                        <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
+                        <AnimatePresence>
+                            {solutionPathD && <motion.path initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} exit={{ opacity: 0 }} d={solutionPathD} stroke="hsl(142, 70%, 50%)" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" className="pointer-events-none" />}
+                        </AnimatePresence>
                         <path d={paths} stroke="hsl(180, 100%, 50%)" strokeWidth="2" fill="none" strokeLinecap="round" filter="url(#glow)" className="opacity-80" />
-                        
                         {maze.map((row, y) => row.map((cell, x) => {
                             if (!cell.item) return null;
                             const cx = x * cellSize + cellSize / 2;
                             const cy = y * cellSize + cellSize / 2;
                             const size = cellSize * 0.6;
                             return (
-                                <g key={`${x}-${y}`} transform={`translate(${cx - size/2}, ${cy - size/2})`}>
-                                    {cell.item === 'speed' && <Zap width={size} height={size} className="text-blue-400 animate-pulse" strokeWidth={3} />}
-                                    {cell.item === 'time' && <Clock width={size} height={size} className="text-yellow-400 animate-bounce" strokeWidth={3} />}
-                                    {cell.item === 'vision' && <Eye width={size} height={size} className="text-green-400 animate-pulse" strokeWidth={3} />}
+                                <g key={`item-${x}-${y}`} transform={`translate(${cx - size/2}, ${cy - size/2})`}>
+                                    {cell.item === 'speed' && <Zap size={size} className="text-blue-400 animate-pulse" strokeWidth={3} />}
+                                    {cell.item === 'time' && <Clock size={size} className="text-yellow-400 animate-bounce" strokeWidth={3} />}
+                                    {cell.item === 'vision' && <Eye size={size} className="text-green-400 animate-pulse" strokeWidth={3} />}
+                                    {cell.item === 'ghost' && <Footprints size={size} className="text-purple-400 animate-pulse" strokeWidth={3} />}
+                                    {cell.item === 'freeze' && <Snowflake size={size} className="text-cyan-200 animate-spin-slow" strokeWidth={3} />}
                                 </g>
-                            )
+                            );
                         }))}
                         <rect x={(maze[0].length - 1) * cellSize + 4} y={(maze.length - 1) * cellSize + 4} width={cellSize - 8} height={cellSize - 8} fill="hsl(270, 100%, 60%)" className="animate-pulse" filter="url(#glow)" />
-                        
-                        <g style={{ 
-                            transform: `translate(${playerPos.x * cellSize + cellSize / 2 - (cellSize * 0.7) / 2}px, ${playerPos.y * cellSize + cellSize / 2 - (cellSize * 0.7) / 2}px)`,
-                            transition: isSpeedActive ? 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)' : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                        }}>
-                            {renderSkin()}
-                        </g>
+                        <motion.g initial={false} animate={{ x: playerPos.x * cellSize + cellSize / 2 - (cellSize * 0.7) / 2, y: playerPos.y * cellSize + cellSize / 2 - (cellSize * 0.7) / 2 }} transition={{ type: "spring", stiffness: isSpeedActive ? 1500 : 500, damping: isSpeedActive ? 15 : 30, mass: isSpeedActive ? 0.5 : 1 }}>
+                            {renderPlayerSkin()}
+                        </motion.g>
                     </svg>
                 </div>
             );
         }
+        const CELL_SIZE = 25;
+        const INITIAL_TIME = 30;
+        const ADMIN_CODE = "sussybaka120956";
         function Game() {
+            const { toast } = useToast();
             const [level, setLevel] = useState(1);
             const [maze, setMaze] = useState([]);
             const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
-            const [timeLeft, setTimeLeft] = useState(30);
+            const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
             const [gameState, setGameState] = useState("playing");
-            const [solutionPath, setSolutionPath] = useState(null);
+            const [solutionPath, setSolutionPath] = useState(undefined);
             const [isSpeedActive, setIsSpeedActive] = useState(false);
+            const [isGhostActive, setIsGhostActive] = useState(false);
+            const [isTimeFrozenPowerup, setIsTimeFrozenPowerup] = useState(false);
             const [activeSkin, setActiveSkin] = useState('orb');
-            const [unlockedSkins, setUnlockedSkins] = useState(['orb', 'cube', 'triangle', 'ghost']);
-            
-            // Admin
-            const [showAdmin, setShowAdmin] = useState(false);
-            const [adminCode, setAdminCode] = useState("");
-            const [isAdmin, setIsAdmin] = useState(false);
+            const [unlockedSkins, setUnlockedSkins] = useState(['orb']); 
+            const [packsAvailable, setPacksAvailable] = useState(0);
+            const [isOpeningPack, setIsOpeningPack] = useState(false);
+            const [openingStage, setOpeningStage] = useState('ready');
+            const [packResult, setPackResult] = useState(null);
+            const [coins, setCoins] = useState(0);
+            const [isShopOpen, setIsShopOpen] = useState(false);
+            const [isAdminOpen, setIsAdminOpen] = useState(false);
+            const [isSkinsOpen, setIsSkinsOpen] = useState(false);
+            const [adminPassword, setAdminPassword] = useState("");
+            const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
             const [isTimeFrozen, setIsTimeFrozen] = useState(false);
             const [isVisionUnlimited, setIsVisionUnlimited] = useState(false);
-            const [showSkins, setShowSkins] = useState(false);
             const [showCutscene, setShowCutscene] = useState(false);
-            // Story
             const [storyState, setStoryState] = useState('intro');
             const [storyStep, setStoryStep] = useState(0);
-            const introDialog = [
-                "Welcome, little dot...",
-                "I am the ARCHITECT of this Neon Labyrinth.",
-                "You seem lost. Good.",
-                "Escape is impossible, but you are welcome to try.",
-                "Survive my trials, and perhaps I will let you leave...",
-                "BEGIN!"
-            ];
-            const level25Dialog = [
-                "IMPRESSIVE...",
-                "You actually survived this long?",
-                "But your luck ends HERE.",
-                "I'm done playing fair.",
-                "Let's see how you handle... TRUE CHAOS!",
-                "DIE!"
-            ];
-            const victoryDialog = [
-                "NO...",
-                "IMPOSSIBLE!",
-                "My masterpiece... RUINED!",
-                "You have bested me, anomaly.",
-                "The labyrinth is yours.",
-                "Begone."
-            ];
+            const introDialog = [ "Welcome, little dot...", "I am the ARCHITECT of the STONE LABYRINTH.", "You seem lost. Good.", "Escape is impossible, but you are welcome to try.", "Survive my trials, and perhaps I will let you leave...", "BEGIN!" ];
+            const level25Dialog = [ "IMPRESSIVE...", "You actually survived this long?", "But your luck ends HERE.", "I'm done playing fair.", "Let's see how you handle... TRUE CHAOS!", "DIE!" ];
+            const victoryDialog = [ "NO...", "IMPOSSIBLE!", "My masterpiece... RUINED!", "You have bested me, anomaly.", "The labyrinth is yours.", "Begone." ];
             const currentDialog = storyState === 'intro' ? introDialog : storyState === 'level25_intro' ? level25Dialog : victoryDialog;
-            const CELL_SIZE = 25;
             const advanceStory = () => {
-                if (storyStep < currentDialog.length - 1) {
-                    setStoryStep(s => s + 1);
-                } else {
-                    setStoryState('none');
-                    setStoryStep(0);
-                    if (storyState === 'intro' || storyState === 'level25_intro') {
-                        setGameState("playing");
-                    } else if (storyState === 'victory') {
-                        setGameState("won");
-                    }
+                if (storyStep < currentDialog.length - 1) { setStoryStep(s => s + 1); }
+                else {
+                    setStoryState('none'); setStoryStep(0);
+                    if (storyState === 'intro') setGameState("playing");
+                    else if (storyState === 'level25_intro') setGameState("playing");
+                    else if (storyState === 'victory') setGameState("won");
                 }
             };
+            useEffect(() => {
+                if (level === 25 && gameState === "playing" && storyState === 'none') {
+                    const chaosInterval = setInterval(() => {
+                        setMaze(prev => {
+                            const newMaze = generateMaze(prev[0].length, prev.length);
+                            const { x, y } = playerPos;
+                            if (newMaze[y] && newMaze[y][x]) {
+                                newMaze[y][x].top = false; newMaze[y][x].bottom = false;
+                                newMaze[y][x].left = false; newMaze[y][x].right = false;
+                                if (y > 0) newMaze[y-1][x].bottom = false; if (y < newMaze.length-1) newMaze[y+1][x].top = false;
+                                if (x > 0) newMaze[y][x-1].right = false; if (x < newMaze[0].length-1) newMaze[y][x+1].left = false;
+                            }
+                            toast({ title: "REALITY SHIFT!", description: "The Architect is warping the maze!", className: "bg-red-950 border-red-500 text-red-100 animate-pulse" });
+                            return newMaze;
+                        });
+                    }, 8000);
+                    return () => clearInterval(chaosInterval);
+                }
+            }, [level, gameState, storyState, playerPos]);
             const getDifficultyColor = (lvl) => {
-                if (lvl === 25) return "bg-red-900 shadow-[0_0_30px_rgba(255,0,0,1)] animate-pulse border-2 border-red-600";
+                if (lvl === 25) return "bg-red-950 shadow-[0_0_30px_rgba(255,0,0,1)] animate-pulse border-4 border-red-600";
                 if (lvl % 5 === 0) return "bg-red-600 shadow-[0_0_15px_rgba(220,38,38,1)] animate-pulse";
                 if (lvl <= 3) return "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]";
                 if (lvl <= 7) return "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)]";
@@ -354,319 +404,295 @@
             };
             const initLevel = useCallback((lvl) => {
                 const isBossLevel = lvl % 5 === 0;
-                
                 let width, height;
                 if (isBossLevel) {
-                    width = 30;
-                    height = 20;
-                    if (lvl === 25) {
-                        setStoryState('level25_intro');
-                    }
+                    width = 30; height = 20;
+                    if (lvl === 25) { setStoryState('level25_intro'); toast({ title: "⚠️ ANOMALY DETECTED ⚠️", description: "The Architect is intervening...", className: "bg-red-950 border-red-500 text-red-100 font-bold animate-bounce" }); }
+                    else { toast({ title: "⚠️ BOSS LEVEL ⚠️", description: "Survive the massive labyrinth!", className: "bg-red-950 border-red-500 text-red-100 font-bold" }); }
                 } else {
-                    width = Math.min(10 + lvl * 2, 30);
-                    height = Math.min(10 + lvl * 2, 20);
+                    width = Math.min(10 + lvl * 2, 30); height = Math.min(10 + lvl * 2, 20);
                     if (lvl % 6 === 0 && lvl !== 25 && lvl > 1) {
-                        const taunts = ["Still alive? How tedious.", "I'm just warming up.", "You run like a scared mouse.", "This maze has no end, fool.", "Do you really think you can escape?", "My patience is wearing thin."];
-                        const taunt = taunts[Math.floor(Math.random() * taunts.length)];
-                        // Using alert for simplicity in portable version for taunts, or custom toast could be added
-                        // For this version, we'll skip the toast to keep it simple or assume user sees cutscenes
+                        const taunts = [ "Still alive? How tedious.", "I'm just warming up.", "You run like a scared mouse.", "This maze has no end, fool.", "Do you really think you can escape?", "My patience is wearing thin." ];
+                        const randomTaunt = taunts[Math.floor(Math.random() * taunts.length)];
+                        toast({ title: "ARCHITECT:", description: `"${randomTaunt}"`, className: "bg-gray-900 border-purple-500 text-purple-200 font-mono" });
                     }
                 }
-                
-                const newMaze = generateMaze(width, height);
-                setMaze(newMaze);
-                setPlayerPos({ x: 0, y: 0 });
-                
+                setMaze(generateMaze(width, height)); setPlayerPos({ x: 0, y: 0 });
                 let newTimeLimit;
-                if (lvl <= 3) newTimeLimit = 50;
-                else if (lvl <= 7) newTimeLimit = 60;
-                else newTimeLimit = 110;
-                
-                setTimeLeft(newTimeLimit);
-                
-                // Don't reset playing state immediately if we are in a story
-                if (lvl === 1 && storyState === 'intro') {} // wait for story
-                else if (lvl === 25) {} // wait for story
-                else setGameState("playing");
-                setSolutionPath(null);
-                setIsSpeedActive(false);
-                setIsTimeFrozen(false);
-                setIsVisionUnlimited(false);
-                setShowCutscene(false);
+                if (lvl <= 3) newTimeLimit = 50; else if (lvl <= 7) newTimeLimit = 60; else newTimeLimit = 110;
+                setTimeLeft(newTimeLimit); setGameState("playing"); setSolutionPath(undefined);
+                setIsSpeedActive(false); setIsGhostActive(false); setIsTimeFrozenPowerup(false);
+                setIsTimeFrozen(false); setIsVisionUnlimited(false); setShowCutscene(false);
             }, []);
-            // Initial load
+            useEffect(() => { initLevel(level); }, [level, initLevel]);
             useEffect(() => {
-                // On mount, level is 1, initLevel called.
-                // But we want story first.
-                setStoryState('intro');
-                setStoryStep(0);
-                const newMaze = generateMaze(12, 12); // Lvl 1 size
-                setMaze(newMaze);
-                setTimeLeft(50);
-            }, []);
-            // Level 25 Chaos
-            useEffect(() => {
-                if (level === 25 && gameState === "playing" && storyState === 'none') {
-                    const interval = setInterval(() => {
-                        setMaze(prev => {
-                            const newMaze = generateMaze(prev[0].length, prev.length);
-                            const {x, y} = playerPos;
-                            if (newMaze[y] && newMaze[y][x]) {
-                                newMaze[y][x].top = false; newMaze[y][x].bottom = false;
-                                newMaze[y][x].left = false; newMaze[y][x].right = false;
-                                if(y>0) newMaze[y-1][x].bottom=false;
-                                if(y<newMaze.length-1) newMaze[y+1][x].top=false;
-                                if(x>0) newMaze[y][x-1].right=false;
-                                if(x<newMaze[0].length-1) newMaze[y][x+1].left=false;
-                            }
-                            return newMaze;
-                        });
-                    }, 8000);
-                    return () => clearInterval(interval);
-                }
-            }, [level, gameState, storyState, playerPos]);
-            useEffect(() => {
-                if (isVisionUnlimited && maze.length > 0) {
-                    const path = solveMaze(maze, playerPos, {x: maze[0].length-1, y: maze.length-1});
-                    setSolutionPath(path);
-                } else if (!isVisionUnlimited && !isSpeedActive && solutionPath) {
-                    setSolutionPath(null);
-                }
-            }, [isVisionUnlimited, playerPos, maze, isSpeedActive]);
-            useEffect(() => {
-                if (gameState !== "playing" || isTimeFrozen || storyState !== 'none') return;
-                const timer = setInterval(() => {
-                    setTimeLeft(t => {
-                        if (t <= 1) { setGameState("lost"); return 0; }
-                        return t - 1;
-                    });
-                }, 1000);
+                if (gameState !== "playing") return;
+                if (isTimeFrozen || isTimeFrozenPowerup || storyState !== 'none') return;
+                const timer = setInterval(() => { setTimeLeft((t) => { if (t <= 1) { setGameState("lost"); return 0; } return t - 1; }); }, 1000);
                 return () => clearInterval(timer);
-            }, [gameState, isTimeFrozen, storyState]);
+            }, [gameState, isTimeFrozen, isTimeFrozenPowerup, storyState]);
             useEffect(() => {
-                if (gameState !== "playing" || showCutscene || storyState !== 'none') return;
+                if (gameState !== "playing" || showCutscene) return;
                 const handleKeyDown = (e) => {
-                    if (e.target.tagName === "INPUT") return;
+                    if (document.activeElement?.tagName === "INPUT") return;
                     const { x, y } = playerPos;
-                    const current = maze[y][x];
-                    let nx = x, ny = y;
-                    
-                    if (["ArrowUp","w"].includes(e.key) && !current.top) ny--;
-                    if (["ArrowRight","d"].includes(e.key) && !current.right) nx++;
-                    if (["ArrowDown","s"].includes(e.key) && !current.bottom) ny++;
-                    if (["ArrowLeft","a"].includes(e.key) && !current.left) nx--;
-                    
-                    if (ny < 0 || ny >= maze.length || nx < 0 || nx >= maze[0].length) return;
-                    if (nx !== x || ny !== y) {
-                        setPlayerPos({ x: nx, y: ny });
-                        const nextCell = maze[ny][nx];
+                    const currentCell = maze[y][x];
+                    let nextX = x, nextY = y;
+                    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+                    const canMove = (dir) => isGhostActive || !currentCell[dir];
+                    if ((e.key === "ArrowUp" || e.key === "w") && canMove('top')) nextY--;
+                    if ((e.key === "ArrowRight" || e.key === "d") && canMove('right')) nextX++;
+                    if ((e.key === "ArrowDown" || e.key === "s") && canMove('bottom')) nextY++;
+                    if ((e.key === "ArrowLeft" || e.key === "a") && canMove('left')) nextX--;
+                    if (nextY < 0 || nextY >= maze.length || nextX < 0 || nextX >= maze[0].length) return;
+                    if (nextX !== x || nextY !== y) {
+                        setPlayerPos({ x: nextX, y: nextY });
+                        const nextCell = maze[nextY][nextX];
                         if (nextCell.item) {
+                            if (nextCell.item === 'time') { setTimeLeft(t => t + 5); toast({ title: "Time Extended!", description: "+5 Seconds added", className: "bg-yellow-900 border-yellow-500 text-yellow-100" }); }
+                            else if (nextCell.item === 'speed') { setIsSpeedActive(true); setTimeout(() => setIsSpeedActive(false), 5000); toast({ title: "Speed Boost!", description: "Super fast movement!", className: "bg-blue-900 border-blue-500 text-blue-100" }); }
+                            else if (nextCell.item === 'vision') { const path = solveMaze(maze, {x: nextX, y: nextY}, {x: maze[0].length-1, y: maze.length-1}); setSolutionPath(path); setTimeout(() => setSolutionPath(undefined), 2000); toast({ title: "Path Revealed!", description: "Showing optimal path", className: "bg-green-900 border-green-500 text-green-100" }); }
+                            else if (nextCell.item === 'ghost') { setIsGhostActive(true); setTimeout(() => setIsGhostActive(false), 5000); toast({ title: "Ghost Mode!", description: "Walk through walls!", className: "bg-purple-900 border-purple-500 text-purple-100" }); }
+                            else if (nextCell.item === 'freeze') { setIsTimeFrozenPowerup(true); setTimeout(() => setIsTimeFrozenPowerup(false), 10000); toast({ title: "Time Freeze!", description: "Timer stopped for 10s!", className: "bg-cyan-900 border-cyan-500 text-cyan-100" }); }
                             const newMaze = [...maze];
-                            newMaze[ny][nx] = { ...nextCell, item: undefined };
+                            newMaze[nextY][nextX] = { ...nextCell, item: undefined };
                             setMaze(newMaze);
-                            
-                            if (nextCell.item === 'time') setTimeLeft(t => t + 5);
-                            if (nextCell.item === 'speed') { setIsSpeedActive(true); setTimeout(() => setIsSpeedActive(false), 5000); }
-                            if (nextCell.item === 'vision') {
-                                const path = solveMaze(maze, {x: nx, y: ny}, {x: maze[0].length-1, y: maze.length-1});
-                                setSolutionPath(path);
-                                setTimeout(() => setSolutionPath(null), 2000);
-                            }
                         }
-                        if (nx === maze[0].length - 1 && ny === maze.length - 1) {
-                            if (level === 25) {
-                                setStoryState('victory');
-                            } else {
-                                setShowCutscene(true);
-                                setTimeout(() => {
-                                    setShowCutscene(false);
-                                    setGameState("won");
-                                }, 1000);
-                            }
+                        if (nextX === maze[0].length - 1 && nextY === maze.length - 1) {
+                            if (level === 25) setStoryState('victory');
+                            else { setShowCutscene(true); setTimeout(() => { setShowCutscene(false); setGameState("won"); }, 1000); }
                         }
                     }
                 };
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [playerPos, maze, gameState, showCutscene, storyState]);
-            const spawnItem = (type) => {
+            }, [playerPos, maze, gameState, isSpeedActive]);
+            const openPack = () => { if (packsAvailable <= 0 || isOpeningPack) return; setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
+            const revealPack = () => {
+                if (openingStage !== 'ready') return;
+                setOpeningStage('shaking');
+                const rand = Math.random() * 100;
+                let rarity = 'Common';
+                if (rand < 0.5) rarity = 'Mythic'; else if (rand < 5.5) rarity = 'Legendary'; else if (rand < 15.5) rarity = 'Epic'; else if (rand < 30) rarity = 'Rare'; else if (rand < 50) rarity = 'Uncommon';
+                const skinsByRarity = { 'Common': ['orb', 'cube', 'triangle'], 'Uncommon': ['diamond', 'heart'], 'Rare': ['star', 'moon'], 'Epic': ['lightning', 'sun'], 'Legendary': ['crown', 'skull'], 'Mythic': ['ghost', 'flame'] };
+                const pool = skinsByRarity[rarity];
+                const wonSkin = pool[Math.floor(Math.random() * pool.length)];
+                setTimeout(() => {
+                    setPackResult(wonSkin);
+                    setOpeningStage('revealed');
+                    if (!unlockedSkins.includes(wonSkin)) { setUnlockedSkins(prev => [...prev, wonSkin]); toast({ title: `UNLOCKED: ${wonSkin.toUpperCase()}`, description: `You found a ${rarity} skin!`, className: "bg-neon-purple border-neon-pink text-white font-bold" }); }
+                    else { toast({ title: "DUPLICATE", description: `You already have the ${wonSkin} skin.`, className: "bg-gray-800 border-gray-600 text-gray-400" }); }
+                }, 2500);
+            };
+            const closePack = () => { setIsOpeningPack(false); setPackResult(null); setOpeningStage('ready'); };
+            const nextLevel = () => {
+                setCoins(c => c + 10); toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
+                const nextLvl = level + 1;
+                if (nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
+                if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
+                if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
+                if (nextLvl === 20 && !unlockedSkins.includes('master')) { setUnlockedSkins(p => [...p, 'master']); toast({ title: "NEW SKIN!", description: "Grandmaster Crown acquired!", className: "bg-yellow-900 border-yellow-500 text-white font-bold" }); }
+                setLevel(l => l + 1);
+            };
+            const buyPowerUp = (type, cost) => {
+                if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
+                setCoins(c => c - cost); spawnPowerUp(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
+            };
+            const buySkipLevel = () => {
+                const cost = 150;
+                if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
+                setCoins(c => c - cost); setIsShopOpen(false); nextLevel(); toast({ title: "LEVEL SKIPPED", description: "Moving to next sector...", className: "bg-neon-cyan border-white text-black font-bold" });
+            };
+            const restart = () => { setLevel(1); setCoins(0); initLevel(1); };
+            const retry = () => { initLevel(level); };
+            const handleAdminLogin = () => { if (adminPassword === ADMIN_CODE) { setIsAdminAuthenticated(true); toast({ title: "Access Granted", description: "Welcome Commander.", className: "bg-red-900 border-red-500 text-red-100" }); } else toast({ variant: "destructive", title: "Access Denied" }); };
+            const spawnPowerUp = (type) => {
+                if (!maze.length) return;
                 const newMaze = [...maze];
-                for(let i=0; i<100; i++) {
+                let placed = false, attempts = 0;
+                while (!placed && attempts < 100) {
                     const x = Math.floor(Math.random() * maze[0].length);
                     const y = Math.floor(Math.random() * maze.length);
-                    if (!newMaze[y][x].item) {
-                        newMaze[y][x].item = type;
-                        setMaze(newMaze);
-                        break;
-                    }
+                    if (!newMaze[y][x].item && (x !== playerPos.x || y !== playerPos.y)) { newMaze[y][x] = { ...newMaze[y][x], item: type }; placed = true; }
+                    attempts++;
                 }
-            };
-            const nextLevel = () => {
-                const nextLvl = level + 1;
-                const newUnlocked = [...unlockedSkins];
-                if (nextLvl === 5 && !newUnlocked.includes('slayer')) { newUnlocked.push('slayer'); alert("UNLOCKED: Boss Slayer Skin!"); }
-                if (nextLvl === 10 && !newUnlocked.includes('ninja')) { newUnlocked.push('ninja'); alert("UNLOCKED: Neon Ninja Skin!"); }
-                if (nextLvl === 20 && !newUnlocked.includes('master')) { newUnlocked.push('master'); alert("UNLOCKED: Grandmaster Crown!"); }
-                setUnlockedSkins(newUnlocked);
-                setLevel(nextLvl);
-                initLevel(nextLvl);
+                if (placed) { setMaze(newMaze); toast({ title: "Item Spawned", description: `Spawned ${type}`, className: "bg-slate-800 border-slate-600 text-white" }); }
             };
             if (!maze.length) return null;
             return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-4 font-mono relative overflow-hidden">
-                    <div className="scanline"></div>
-                    
+                <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-mono relative overflow-hidden">
                     <div className="w-full max-w-4xl flex justify-between items-end mb-6 px-4 z-10">
-                        <div>
-                            <h2 className="text-neon-purple text-xs mb-1 tracking-widest uppercase opacity-80">Current Level</h2>
-                            <div className="flex items-center gap-4">
-                                <div className={`text-4xl font-press text-glow ${level % 5 === 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                                    {String(level).padStart(2, '0')}
+                        <div className="flex flex-col gap-2">
+                            <div>
+                                <h2 className="text-neon-purple text-sm mb-1 tracking-widest uppercase opacity-80">Level</h2>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 bg-yellow-900/40 border border-yellow-600/50 px-3 py-1 rounded text-yellow-400 font-mono text-sm animate-pulse"><Coins size={14} /> {coins}</div>
+                                    <div className={`text-4xl font-press text-glow ${level % 5 === 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{String(level).padStart(2, '0')}</div>
+                                    <div className={`w-4 h-4 rounded-full ${getDifficultyColor(level)}`} />
+                                    {level % 5 === 0 && <Skull className="text-red-500 animate-bounce" />}
                                 </div>
-                                <div className={`w-4 h-4 rounded-full ${getDifficultyColor(level)} transition-colors`}></div>
-                                {level % 5 === 0 && <Skull className="text-red-500 animate-bounce" width={20} />}
                             </div>
-                            <div className="flex gap-2 mt-2 text-xs">
-                                {isSpeedActive && <span className="text-blue-400 flex items-center"><Zap width={12}/> SPEED</span>}
-                                {solutionPath && <span className="text-green-400 flex items-center"><Eye width={12}/> VISION</span>}
-                                {isTimeFrozen && <span className="text-red-400 flex items-center"><ShieldAlert width={12}/> FROZEN</span>}
-                                {isVisionUnlimited && <span className="text-green-400 flex items-center"><Eye width={12}/> UNLIMITED</span>}
+                            <div className="flex gap-2 min-h-[24px]">
+                                {isSpeedActive && <div className="flex items-center gap-1 text-xs text-blue-400 animate-pulse"><Zap size={12} /> SPEED</div>}
+                                {isGhostActive && <div className="flex items-center gap-1 text-xs text-purple-400 animate-pulse"><Footprints size={12} /> GHOST</div>}
+                                {isTimeFrozenPowerup && <div className="flex items-center gap-1 text-xs text-cyan-400 animate-pulse"><Snowflake size={12} /> FROZEN</div>}
+                                {solutionPath && <div className="flex items-center gap-1 text-xs text-green-400 animate-pulse"><Eye size={12} /> VISION</div>}
+                                {isTimeFrozen && <div className="flex items-center gap-1 text-xs text-red-400 animate-pulse"><ShieldAlert size={12} /> FROZEN (ADMIN)</div>}
                             </div>
                         </div>
-                        <div className="text-right">
-                            <h2 className="text-neon-pink text-xs mb-1 tracking-widest uppercase opacity-80">Time</h2>
+                        <div className="flex flex-col items-end">
+                            <h2 className="text-neon-pink text-sm mb-1 tracking-widest uppercase opacity-80">Time</h2>
                             <div className={`text-4xl font-press text-glow ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{Math.floor(timeLeft)}s</div>
                         </div>
                     </div>
-                    <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
-                    {/* Story / Dialog Overlay */}
-                    {storyState !== 'none' && (
-                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-8">
-                            <div className="max-w-lg w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">
-                                <div className="relative inline-block">
-                                <Skull className="w-32 h-32 text-red-600 animate-bounce mx-auto drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]" />
-                                <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse"></div>
+                    <div className="relative z-10">
+                        <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
+                        {storyState !== 'none' && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-8 rounded-lg">
+                                <div className="text-center space-y-8">
+                                    <Skull className="w-32 h-32 text-red-600 animate-bounce mx-auto" />
+                                    <div className="bg-gray-900/80 border-2 border-red-800 p-6 rounded-lg"><p className="font-press text-red-500 text-lg">{currentDialog[storyStep]}</p></div>
+                                    <Button onClick={advanceStory} className="bg-red-700 hover:bg-red-600 text-white font-press py-6 px-12 w-full">{storyStep < currentDialog.length - 1 ? "NEXT >" : "FIGHT!"}</Button>
                                 </div>
-                                <div className="bg-gray-900/80 border-2 border-red-800 p-6 rounded-lg shadow-[0_0_20px_rgba(220,38,38,0.3)] min-h-[150px] flex flex-col justify-center items-center">
-                                <p className="font-press text-red-500 text-lg leading-relaxed typing-effect">
-                                    "{currentDialog[storyStep]}"
-                                </p>
-                                </div>
-                                <button onClick={advanceStory} className="bg-red-700 hover:bg-red-600 text-white font-press text-sm py-6 px-12 w-full animate-pulse rounded">
-                                {storyStep < currentDialog.length - 1 ? "NEXT >" : "FIGHT!"}
-                                </button>
                             </div>
-                        </div>
-                    )}
-                    {/* Cutscene Overlay */}
-                    {showCutscene && (
-                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
-                            <div className="text-center animate-pulse">
-                                <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-4 animate-bounce-slow" width={96} height={96} />
-                                <h2 className="text-4xl font-press text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">
-                                LEVEL CLEARED
-                                </h2>
+                        )}
+                        {gameState !== "playing" && !showCutscene && (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-lg z-20">
+                                <Card className="bg-black border-2 border-white p-8 text-center w-80">
+                                    {gameState === "won" ? (
+                                        <>
+                                            <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                                            <h2 className="text-2xl font-press text-green-400 mb-2">ESCAPED!</h2>
+                                            <Button onClick={nextLevel} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Timer className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                                            <h2 className="text-2xl font-press text-red-500 mb-2">TIME OUT</h2>
+                                            <Button onClick={retry} className="w-full bg-white hover:bg-gray-200 text-black font-bold font-press mt-4 py-6">TRY AGAIN</Button>
+                                            <Button variant="ghost" onClick={() => setLevel(1)} className="w-full text-gray-500 mt-2">Reset</Button>
+                                        </>
+                                    )}
+                                </Card>
                             </div>
-                        </div>
-                    )}
-                    {gameState !== "playing" && !showCutscene && storyState === 'none' && (
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-20">
-                            <div className="bg-black border-2 border-white p-8 text-center rounded max-w-sm w-full shadow-[0_0_50px_rgba(255,255,255,0.2)]">
-                                {gameState === "won" ? (
-                                    <>
-                                        <Trophy className="mx-auto mb-4 text-yellow-400" width={48} height={48} />
-                                        <h2 className="text-2xl font-press text-green-400 mb-4">ESCAPED!</h2>
-                                        <button onClick={nextLevel} className="w-full bg-neon-cyan text-black font-bold font-press py-4 rounded hover:bg-cyan-400">NEXT LEVEL</button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <TimerIcon className="mx-auto mb-4 text-red-500" width={48} height={48} />
-                                        <h2 className="text-2xl font-press text-red-500 mb-4">TIME OUT</h2>
-                                        <button onClick={() => initLevel(level)} className="w-full bg-white text-black font-bold font-press py-4 rounded hover:bg-gray-200">TRY AGAIN</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                    <div className="fixed bottom-4 left-4 flex gap-2 z-50">
-                        <button onClick={() => setShowSkins(true)} className="text-xs bg-black/50 border border-gray-700 px-3 py-2 rounded hover:text-neon-cyan hover:border-neon-cyan flex items-center gap-2">
-                            <Palette width={14}/> SKINS
-                        </button>
-                        <button onClick={() => setShowAdmin(true)} className="text-xs bg-black/50 border border-gray-700 px-3 py-2 rounded hover:text-neon-purple hover:border-neon-purple">
-                            ADMIN
-                        </button>
+                        )}
                     </div>
-                    {/* Skins Modal */}
-                    {showSkins && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                            <div className="bg-black border border-neon-cyan p-6 rounded w-80">
-                                <h3 className="font-press text-neon-cyan mb-4 text-sm">CUSTOMIZATION</h3>
-                                <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto">
-                                    {['orb','cube','triangle','ghost'].map(s => (
-                                        <button key={s} onClick={() => setActiveSkin(s)} className={`p-2 border rounded capitalize ${activeSkin === s ? 'border-neon-pink bg-pink-900/20' : 'border-gray-800'}`}>
-                                            {s}
-                                        </button>
-                                    ))}
-                                    
-                                    <button disabled={!unlockedSkins.includes('slayer')} onClick={() => setActiveSkin('slayer')} className={`p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('slayer') ? 'opacity-50 border-gray-800' : activeSkin === 'slayer' ? 'border-red-500 bg-red-900/20' : 'border-gray-800'}`}>
-                                        <span>Slayer</span>
-                                        {!unlockedSkins.includes('slayer') && <span className="text-[10px] text-red-400 flex items-center gap-1"><Lock size={8}/> Lvl 5</span>}
-                                    </button>
-                                    <button disabled={!unlockedSkins.includes('ninja')} onClick={() => setActiveSkin('ninja')} className={`p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('ninja') ? 'opacity-50 border-gray-800' : activeSkin === 'ninja' ? 'border-purple-500 bg-purple-900/20' : 'border-gray-800'}`}>
-                                        <span>Ninja</span>
-                                        {!unlockedSkins.includes('ninja') && <span className="text-[10px] text-purple-400 flex items-center gap-1"><Lock size={8}/> Lvl 10</span>}
-                                    </button>
-                                    <button disabled={!unlockedSkins.includes('master')} onClick={() => setActiveSkin('master')} className={`col-span-2 p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('master') ? 'opacity-50 border-gray-800' : activeSkin === 'master' ? 'border-yellow-500 bg-yellow-900/20' : 'border-gray-800'}`}>
-                                        <span>Grandmaster</span>
-                                        {!unlockedSkins.includes('master') && <span className="text-[10px] text-yellow-400 flex items-center gap-1"><Lock size={8}/> Lvl 20</span>}
-                                    </button>
+                    <div className="fixed bottom-4 left-4 flex gap-2">
+                        <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
+                            <DialogTrigger><Button className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold font-mono text-xs border border-yellow-400"><ShoppingCart className="w-4 h-4 mr-2" /> SHOP</Button></DialogTrigger>
+                            <DialogContent className="bg-black border-yellow-500 text-white font-mono max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle className="text-yellow-500 font-press text-sm flex items-center gap-2"><ShoppingCart size={18} /> BLACK MARKET</DialogTitle>
+                                    <DialogDescription className="text-gray-400 text-xs">BALANCE: <span className="text-yellow-400 font-bold">{coins} Coins</span></DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-2 gap-3 py-4">
+                                    <Button variant="outline" onClick={() => buyPowerUp('speed', 50)} className="flex flex-col h-auto py-3 border-blue-500/50 hover:bg-blue-950/50 text-blue-400"><div className="flex items-center gap-1 mb-1"><Zap size={16} /> SPEED</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                    <Button variant="outline" onClick={() => buyPowerUp('time', 50)} className="flex flex-col h-auto py-3 border-green-500/50 hover:bg-green-950/50 text-green-400"><div className="flex items-center gap-1 mb-1"><Clock size={16} /> TIME</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                    <Button variant="outline" onClick={() => buyPowerUp('vision', 50)} className="flex flex-col h-auto py-3 border-purple-500/50 hover:bg-purple-950/50 text-purple-400"><div className="flex items-center gap-1 mb-1"><Eye size={16} /> VISION</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                    <Button variant="outline" onClick={() => buyPowerUp('ghost', 50)} className="flex flex-col h-auto py-3 border-white/50 hover:bg-gray-800 text-white"><div className="flex items-center gap-1 mb-1"><Footprints size={16} /> GHOST</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                    <Button variant="outline" onClick={() => buyPowerUp('freeze', 50)} className="flex flex-col h-auto py-3 border-cyan-500/50 hover:bg-cyan-950/50 text-cyan-400 col-span-2"><div className="flex items-center gap-1 mb-1"><Snowflake size={16} /> FREEZE</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                    <Button variant="destructive" onClick={buySkipLevel} className="col-span-2 bg-red-900/50 hover:bg-red-800 border border-red-500 flex justify-between"><span className="flex items-center gap-2"><SkipForward size={16} /> SKIP LEVEL</span><span className="text-yellow-400 font-bold">150 Coins</span></Button>
                                 </div>
-                                <button onClick={() => setShowSkins(false)} className="w-full bg-gray-800 text-white py-2 rounded">CLOSE</button>
-                            </div>
-                        </div>
-                    )}
-                    {/* Admin Modal */}
-                    {showAdmin && (
-                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                            <div className="bg-black border border-neon-purple p-6 rounded w-80">
-                                <h3 className="font-press text-neon-purple mb-4 text-sm">SYSTEM OVERRIDE</h3>
-                                {!isAdmin ? (
+                            </DialogContent>
+                        </Dialog>
+                        <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`relative font-mono text-xs ${packsAvailable > 0 ? 'bg-neon-purple hover:bg-purple-600 text-white animate-pulse' : 'bg-gray-900 text-gray-500 border-gray-800'}`}><Package className="w-4 h-4 mr-2" /> PACKS ({packsAvailable})</Button>
+                        <Dialog open={isSkinsOpen} onOpenChange={setIsSkinsOpen}>
+                            <DialogTrigger><Button variant="ghost" size="sm" className="text-xs text-gray-700 hover:text-neon-cyan font-mono opacity-50 hover:opacity-100"><Palette className="w-4 h-4 mr-1" /> SKINS</Button></DialogTrigger>
+                            <DialogContent className="bg-black border-neon-cyan text-white font-mono max-w-md">
+                                <DialogHeader><DialogTitle className="text-neon-cyan font-press text-sm">CUSTOMIZATION</DialogTitle></DialogHeader>
+                                <div className="grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                                    {Object.entries(SKIN_RARITIES).map(([skin, rarity]) => {
+                                        if (rarity === 'Special' && !unlockedSkins.includes(skin)) return null;
+                                        const isUnlocked = unlockedSkins.includes(skin);
+                                        let rarityColor = 'text-gray-500';
+                                        if (rarity === 'Uncommon') rarityColor = 'text-blue-400';
+                                        if (rarity === 'Rare') rarityColor = 'text-purple-400';
+                                        if (rarity === 'Epic') rarityColor = 'text-yellow-400';
+                                        if (rarity === 'Legendary') rarityColor = 'text-orange-500';
+                                        if (rarity === 'Mythic') rarityColor = 'text-red-500 font-bold';
+                                        return (
+                                            <button key={skin} disabled={!isUnlocked} onClick={() => setActiveSkin(skin)} className={`relative flex flex-col items-center p-2 rounded border-2 ${activeSkin === skin ? 'border-neon-pink bg-pink-900/20' : 'border-gray-800 bg-black/50'} ${!isUnlocked ? 'opacity-50 grayscale' : ''}`}>
+                                                <div className="mb-2 scale-75"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={20} playerPos={{x:0,y:0}} skin={skin} /></div>
+                                                <span className="text-[10px] uppercase font-bold">{skin}</span>
+                                                <span className={`text-[8px] ${rarityColor}`}>{rarity}</span>
+                                                {!isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/60"><Lock size={12} className="text-gray-500" /></div>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                        <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+                            <DialogTrigger><Button variant="ghost" size="sm" className="text-xs text-gray-700 hover:text-neon-purple font-mono opacity-50 hover:opacity-100">ADMIN</Button></DialogTrigger>
+                            <DialogContent className="bg-black border-neon-purple text-white font-mono">
+                                <DialogHeader><DialogTitle className="text-neon-purple font-press text-sm">SYSTEM OVERRIDE</DialogTitle></DialogHeader>
+                                {!isAdminAuthenticated ? (
                                     <div className="space-y-4">
-                                        <input type="password" value={adminCode} onChange={e => setAdminCode(e.target.value)} placeholder="ENTER CODE" className="w-full bg-gray-900 border border-gray-700 p-2 text-white font-mono rounded" />
-                                        <button onClick={() => {
-                                            if (adminCode === "sussybaka120956") setIsAdmin(true);
-                                            else alert("ACCESS DENIED");
-                                        }} className="w-full bg-neon-purple text-white font-press text-xs py-3 rounded">AUTHENTICATE</button>
-                                        <button onClick={() => setShowAdmin(false)} className="w-full text-gray-500 text-xs">CANCEL</button>
+                                        <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="bg-gray-900 border-gray-700 text-white" placeholder="ENTER CODE" />
+                                        <Button onClick={handleAdminLogin} className="w-full bg-neon-purple text-white font-press text-xs">AUTHENTICATE</Button>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-center bg-gray-900 p-2 rounded">
-                                            <span className="text-xs">FREEZE TIME</span>
-                                            <button onClick={() => setIsTimeFrozen(!isTimeFrozen)} className={`w-8 h-4 rounded-full ${isTimeFrozen ? 'bg-red-500' : 'bg-gray-600'}`}></button>
-                                        </div>
-                                        <div className="flex justify-between items-center bg-gray-900 p-2 rounded">
-                                            <span className="text-xs">UNLIMITED VISION</span>
-                                            <button onClick={() => setIsVisionUnlimited(!isVisionUnlimited)} className={`w-8 h-4 rounded-full ${isVisionUnlimited ? 'bg-green-500' : 'bg-gray-600'}`}></button>
-                                        </div>
-                                        <button onClick={nextLevel} className="w-full bg-gray-800 border border-gray-600 text-white text-xs py-2 rounded flex items-center justify-center gap-2"><SkipForward width={14}/> SKIP LEVEL</button>
+                                        <div className="flex justify-between items-center"><span className="text-sm">Freeze Time</span><Switch checked={isTimeFrozen} onCheckedChange={setIsTimeFrozen} /></div>
+                                        <div className="flex justify-between items-center"><span className="text-sm">Vision</span><Switch checked={isVisionUnlimited} onCheckedChange={setIsVisionUnlimited} /></div>
+                                        <Button variant="secondary" size="sm" onClick={nextLevel} className="w-full">SKIP LEVEL</Button>
                                         <div className="grid grid-cols-3 gap-2">
-                                            <button onClick={() => spawnItem('speed')} className="border border-blue-500 text-blue-400 text-xs py-2 rounded">SPD</button>
-                                            <button onClick={() => spawnItem('time')} className="border border-yellow-500 text-yellow-400 text-xs py-2 rounded">TIME</button>
-                                            <button onClick={() => spawnItem('vision')} className="border border-green-500 text-green-400 text-xs py-2 rounded">VIS</button>
+                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('speed')} className="text-blue-400">Speed</Button>
+                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('time')} className="text-yellow-400">Time</Button>
+                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('ghost')} className="text-purple-400">Ghost</Button>
                                         </div>
-                                        <button onClick={() => setShowAdmin(false)} className="w-full bg-gray-800 text-white py-2 rounded">CLOSE</button>
+                                    </div>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                    {isOpeningPack && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md">
+                            <div className="flex flex-col items-center text-center">
+                                {openingStage === 'ready' && (
+                                    <div className="animate-in zoom-in duration-300 cursor-pointer group" onClick={revealPack}>
+                                        <Package className="w-40 h-40 text-neon-purple group-hover:scale-110 transition-transform drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]" />
+                                        <h2 className="text-3xl font-press text-white mt-8 animate-bounce">CLICK TO OPEN</h2>
+                                    </div>
+                                )}
+                                {openingStage === 'shaking' && (
+                                    <div className="animate-shake"><Package className="w-40 h-40 text-white" /></div>
+                                )}
+                                {openingStage === 'revealed' && packResult && (
+                                    <div className="animate-in zoom-in duration-500 flex flex-col items-center">
+                                        <div className="scale-150 mb-8"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={60} playerPos={{x:0,y:0}} skin={packResult} /></div>
+                                        <h2 className="text-4xl font-press text-white mb-2">{packResult.toUpperCase()}</h2>
+                                        <div className="font-mono text-xl mb-2 px-6 py-2 rounded border-2 border-neon-pink text-neon-pink">{SKIN_RARITIES[packResult]}</div>
+                                        <p className="text-gray-400 font-mono text-sm mb-8">
+                                            {SKIN_RARITIES[packResult] === 'Mythic' ? '0.5%' : SKIN_RARITIES[packResult] === 'Legendary' ? '5%' : SKIN_RARITIES[packResult] === 'Epic' ? '10%' : SKIN_RARITIES[packResult] === 'Rare' ? '14.5%' : SKIN_RARITIES[packResult] === 'Uncommon' ? '20%' : '50%'} Chance
+                                        </p>
+                                        <Button onClick={closePack} className="bg-white text-black font-press px-8 py-6 text-lg hover:bg-gray-200">CONTINUE</Button>
                                     </div>
                                 )}
                             </div>
                         </div>
                     )}
-                    <BackgroundMusic />
                 </div>
             );
         }
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Game />);
-    </script>
-</body>
-</html>
+        function AppWithToast() {
+            const [toasts, setToasts] = useState([]);
+            const toast = useCallback(({ title, description, className, variant }) => {
+                const id = Date.now();
+                setToasts(prev => [...prev, { id, title, description, className, variant }]);
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+            }, []);
+            return (
+                <ToastContext.
+
+Provider value={{ toasts, toast }}>
+<Game />
+<Toaster />
+</ToastContext.Provider>
+);
+}
+root.render(<AppWithToast />);
+</script>
+
+</body> </html>.
