@@ -128,30 +128,24 @@
                 <span className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-4 bg-white' : 'translate-x-0 bg-white'}`} />
             </button>
         );
-        const Dialog = ({ open, onOpenChange, children }) => {
+        // Fixed Modal Component - Decoupled from Trigger
+        const Modal = ({ open, onClose, children, className }) => {
             if (!open) return null;
             return (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                        {React.Children.map(children, child => {
-                            if (child.type === DialogTrigger) return null;
-                            return React.cloneElement(child, { onClose: () => onOpenChange(false) });
-                        })}
+                    <div className={`relative w-full max-w-lg animate-in zoom-in-95 duration-200 bg-black border border-gray-700 p-6 shadow-lg sm:rounded-lg ${className}`} onClick={(e) => e.stopPropagation()}>
+                        {children}
+                        <button onClick={onClose} className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none text-white">
+                            <X size={16} /><span className="sr-only">Close</span>
+                        </button>
                     </div>
-                    <div className="absolute inset-0 -z-10" onClick={() => onOpenChange(false)}></div>
+                    <div className="absolute inset-0 -z-10" onClick={onClose}></div>
                 </div>
             );
         };
-        const DialogTrigger = ({ children, onClick }) => React.cloneElement(children, { onClick });
-        const DialogContent = ({ children, className, onClose }) => (
-            <div className={`grid w-full gap-4 border bg-background p-6 shadow-lg sm:rounded-lg ${className}`}>
-                {children}
-                <button onClick={onClose} className="absolute right-4 top-4 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none"><X size={16} /><span className="sr-only">Close</span></button>
-            </div>
-        );
-        const DialogHeader = ({ className, ...props }) => <div className={`flex flex-col space-y-1.5 text-center sm:text-left ${className}`} {...props} />;
-        const DialogTitle = ({ className, ...props }) => <h2 className={`text-lg font-semibold leading-none tracking-tight ${className}`} {...props} />;
-        const DialogDescription = ({ className, ...props }) => <p className={`text-sm text-muted-foreground ${className}`} {...props} />;
+        const ModalHeader = ({ className, ...props }) => <div className={`flex flex-col space-y-1.5 text-center sm:text-left mb-4 ${className}`} {...props} />;
+        const ModalTitle = ({ className, ...props }) => <h2 className={`text-lg font-semibold leading-none tracking-tight ${className}`} {...props} />;
+        const ModalDescription = ({ className, ...props }) => <p className={`text-sm text-muted-foreground mt-2 ${className}`} {...props} />;
         // Toast System
         const ToastContext = React.createContext({});
         const useToast = () => React.useContext(ToastContext);
@@ -547,79 +541,81 @@
                     <div className="relative z-20 scale-125">
                         <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
                     </div>
-                    {/* BOTTOM CONTROLS */}
+                    {/* BOTTOM CONTROLS - FIXED VISIBILITY */}
                     <div className="fixed bottom-8 left-8 z-30 flex gap-4">
                         <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white ${packsAvailable > 0 ? 'animate-pulse border-neon-purple text-white' : ''}`}>
                             <Package className="w-4 h-4 mr-2" /> PACKS ({packsAvailable})
                         </Button>
                         
-                        <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
-                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white"><ShoppingCart className="w-4 h-4 mr-2" /> SHOP</Button></DialogTrigger>
-                            <DialogContent className="bg-black border-yellow-500 text-white font-mono max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle className="text-yellow-500 font-press text-sm flex items-center gap-2"><ShoppingCart size={18} /> BLACK MARKET</DialogTitle>
-                                    <DialogDescription className="text-gray-400 text-xs">BALANCE: <span className="text-yellow-400 font-bold">{coins} Coins</span></DialogDescription>
-                                </DialogHeader>
-                                <div className="grid grid-cols-2 gap-3 py-4">
-                                    <Button variant="outline" onClick={() => buyPowerUp('speed', 50)} className="flex flex-col h-auto py-3 border-blue-500/50 hover:bg-blue-950/50 text-blue-400"><div className="flex items-center gap-1 mb-1"><Zap size={16} /> SPEED</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
-                                    <Button variant="outline" onClick={() => buyPowerUp('time', 50)} className="flex flex-col h-auto py-3 border-green-500/50 hover:bg-green-950/50 text-green-400"><div className="flex items-center gap-1 mb-1"><Clock size={16} /> TIME</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
-                                    <Button variant="outline" onClick={() => buyPowerUp('vision', 50)} className="flex flex-col h-auto py-3 border-purple-500/50 hover:bg-purple-950/50 text-purple-400"><div className="flex items-center gap-1 mb-1"><Eye size={16} /> VISION</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
-                                    <Button variant="outline" onClick={() => buyPowerUp('ghost', 50)} className="flex flex-col h-auto py-3 border-white/50 hover:bg-gray-800 text-white"><div className="flex items-center gap-1 mb-1"><Footprints size={16} /> GHOST</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
-                                    <Button variant="outline" onClick={() => buyPowerUp('freeze', 50)} className="flex flex-col h-auto py-3 border-cyan-500/50 hover:bg-cyan-950/50 text-cyan-400 col-span-2"><div className="flex items-center gap-1 mb-1"><Snowflake size={16} /> FREEZE</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
-                                    <Button variant="destructive" onClick={buySkipLevel} className="col-span-2 bg-red-900/50 hover:bg-red-800 border border-red-500 flex justify-between"><span className="flex items-center gap-2"><SkipForward size={16} /> SKIP LEVEL</span><span className="text-yellow-400 font-bold">150 Coins</span></Button>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                        <Dialog open={isSkinsOpen} onOpenChange={setIsSkinsOpen}>
-                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white"><Palette className="w-4 h-4 mr-2" /> SKINS</Button></DialogTrigger>
-                            <DialogContent className="bg-black border-neon-cyan text-white font-mono max-w-md">
-                                <DialogHeader><DialogTitle className="text-neon-cyan font-press text-sm">CUSTOMIZATION</DialogTitle></DialogHeader>
-                                <div className="grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-2">
-                                    {Object.entries(SKIN_RARITIES).map(([skin, rarity]) => {
-                                        if (rarity === 'Special' && !unlockedSkins.includes(skin)) return null;
-                                        const isUnlocked = unlockedSkins.includes(skin);
-                                        let rarityColor = 'text-gray-500';
-                                        if (rarity === 'Uncommon') rarityColor = 'text-blue-400';
-                                        if (rarity === 'Rare') rarityColor = 'text-purple-400';
-                                        if (rarity === 'Epic') rarityColor = 'text-yellow-400';
-                                        if (rarity === 'Legendary') rarityColor = 'text-orange-500';
-                                        if (rarity === 'Mythic') rarityColor = 'text-red-500 font-bold';
-                                        return (
-                                            <button key={skin} disabled={!isUnlocked} onClick={() => setActiveSkin(skin)} className={`relative flex flex-col items-center p-2 rounded border-2 ${activeSkin === skin ? 'border-neon-pink bg-pink-900/20' : 'border-gray-800 bg-black/50'} ${!isUnlocked ? 'opacity-50 grayscale' : ''}`}>
-                                                <div className="mb-2 scale-75"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={20} playerPos={{x:0,y:0}} skin={skin} /></div>
-                                                <span className="text-[10px] uppercase font-bold">{skin}</span>
-                                                <span className={`text-[8px] ${rarityColor}`}>{rarity}</span>
-                                                {!isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/60"><Lock size={12} className="text-gray-500" /></div>}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </DialogContent>
-                        </Dialog>
+                        {/* DIRECT BUTTONS - NOT WRAPPED IN DIALOG TRIGGER */}
+                        <Button onClick={() => setIsShopOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
+                            <ShoppingCart className="w-4 h-4 mr-2" /> SHOP
+                        </Button>
+                        <Button onClick={() => setIsSkinsOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
+                            <Palette className="w-4 h-4 mr-2" /> SKINS
+                        </Button>
+                        <Button onClick={() => setIsAdminOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
+                            ADMIN
+                        </Button>
+                        {/* MODALS - DECOUPLED FROM BUTTONS */}
+                        <Modal open={isShopOpen} onClose={() => setIsShopOpen(false)} className="border-yellow-500 text-white">
+                            <ModalHeader>
+                                <ModalTitle className="text-yellow-500 font-press text-sm flex items-center gap-2"><ShoppingCart size={18} /> BLACK MARKET</ModalTitle>
+                                <ModalDescription className="text-gray-400 text-xs">BALANCE: <span className="text-yellow-400 font-bold">{coins} Coins</span></ModalDescription>
+                            </ModalHeader>
+                            <div className="grid grid-cols-2 gap-3 py-4">
+                                <Button variant="outline" onClick={() => buyPowerUp('speed', 50)} className="flex flex-col h-auto py-3 border-blue-500/50 hover:bg-blue-950/50 text-blue-400"><div className="flex items-center gap-1 mb-1"><Zap size={16} /> SPEED</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                <Button variant="outline" onClick={() => buyPowerUp('time', 50)} className="flex flex-col h-auto py-3 border-green-500/50 hover:bg-green-950/50 text-green-400"><div className="flex items-center gap-1 mb-1"><Clock size={16} /> TIME</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                <Button variant="outline" onClick={() => buyPowerUp('vision', 50)} className="flex flex-col h-auto py-3 border-purple-500/50 hover:bg-purple-950/50 text-purple-400"><div className="flex items-center gap-1 mb-1"><Eye size={16} /> VISION</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                <Button variant="outline" onClick={() => buyPowerUp('ghost', 50)} className="flex flex-col h-auto py-3 border-white/50 hover:bg-gray-800 text-white"><div className="flex items-center gap-1 mb-1"><Footprints size={16} /> GHOST</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                <Button variant="outline" onClick={() => buyPowerUp('freeze', 50)} className="flex flex-col h-auto py-3 border-cyan-500/50 hover:bg-cyan-950/50 text-cyan-400 col-span-2"><div className="flex items-center gap-1 mb-1"><Snowflake size={16} /> FREEZE</div><span className="text-[10px] text-gray-400">50 Coins</span></Button>
+                                <Button variant="destructive" onClick={buySkipLevel} className="col-span-2 bg-red-900/50 hover:bg-red-800 border border-red-500 flex justify-between"><span className="flex items-center gap-2"><SkipForward size={16} /> SKIP LEVEL</span><span className="text-yellow-400 font-bold">150 Coins</span></Button>
+                            </div>
+                        </Modal>
+                        <Modal open={isSkinsOpen} onClose={() => setIsSkinsOpen(false)} className="border-neon-cyan text-white">
+                            <ModalHeader><ModalTitle className="text-neon-cyan font-press text-sm">CUSTOMIZATION</ModalTitle></ModalHeader>
+                            <div className="grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                                {Object.entries(SKIN_RARITIES).map(([skin, rarity]) => {
+                                    if (rarity === 'Special' && !unlockedSkins.includes(skin)) return null;
+                                    const isUnlocked = unlockedSkins.includes(skin);
+                                    let rarityColor = 'text-gray-500';
+                                    if (rarity === 'Uncommon') rarityColor = 'text-blue-400';
+                                    if (rarity === 'Rare') rarityColor = 'text-purple-400';
+                                    if (rarity === 'Epic') rarityColor = 'text-yellow-400';
+                                    if (rarity === 'Legendary') rarityColor = 'text-orange-500';
+                                    if (rarity === 'Mythic') rarityColor = 'text-red-500 font-bold';
+                                    return (
+                                        <button key={skin} disabled={!isUnlocked} onClick={() => setActiveSkin(skin)} className={`relative flex flex-col items-center p-2 rounded border-2 ${activeSkin === skin ? 'border-neon-pink bg-pink-900/20' : 'border-gray-800 bg-black/50'} ${!isUnlocked ? 'opacity-50 grayscale' : ''}`}>
+                                            <div className="mb-2 scale-75"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={20} playerPos={{x:0,y:0}} skin={skin} /></div>
+                                            <span className="text-[10px] uppercase font-bold">{skin}</span>
+                                            <span className={`text-[8px] ${rarityColor}`}>{rarity}</span>
+                                            {!isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/60"><Lock size={12} className="text-gray-500" /></div>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Modal>
                         
-                         <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">ADMIN</Button></DialogTrigger>
-                            <DialogContent className="bg-black border-neon-purple text-white font-mono">
-                                <DialogHeader><DialogTitle className="text-neon-purple font-press text-sm">SYSTEM OVERRIDE</DialogTitle></DialogHeader>
-                                {!isAdminAuthenticated ? (
-                                    <div className="space-y-4">
-                                        <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="bg-gray-900 border-gray-700 text-white" placeholder="ENTER CODE" />
-                                        <Button onClick={handleAdminLogin} className="w-full bg-neon-purple text-white font-press text-xs">AUTHENTICATE</Button>
+                         <Modal open={isAdminOpen} onClose={() => setIsAdminOpen(false)} className="border-neon-purple text-white">
+                            <ModalHeader><ModalTitle className="text-neon-purple font-press text-sm">SYSTEM OVERRIDE</ModalTitle></ModalHeader>
+                            {!isAdminAuthenticated ? (
+                                <div className="space-y-4">
+                                    <Input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="bg-gray-900 border-gray-700 text-white" placeholder="ENTER CODE" />
+                                    <Button onClick={handleAdminLogin} className="w-full bg-neon-purple text-white font-press text-xs">AUTHENTICATE</Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center"><span className="text-sm">Freeze Time</span><Switch checked={isTimeFrozen} onCheckedChange={setIsTimeFrozen} /></div>
+                                    <div className="flex justify-between items-center"><span className="text-sm">Vision</span><Switch checked={isVisionUnlimited} onCheckedChange={setIsVisionUnlimited} /></div>
+                                    <Button variant="secondary" size="sm" onClick={nextLevel} className="w-full">SKIP LEVEL</Button>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => spawnPowerUp('speed')} className="text-blue-400">Speed</Button>
+                                        <Button variant="outline" size="sm" onClick={() => spawnPowerUp('time')} className="text-yellow-400">Time</Button>
+                                        <Button variant="outline" size="sm" onClick={() => spawnPowerUp('ghost')} className="text-purple-400">Ghost</Button>
                                     </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center"><span className="text-sm">Freeze Time</span><Switch checked={isTimeFrozen} onCheckedChange={setIsTimeFrozen} /></div>
-                                        <div className="flex justify-between items-center"><span className="text-sm">Vision</span><Switch checked={isVisionUnlimited} onCheckedChange={setIsVisionUnlimited} /></div>
-                                        <Button variant="secondary" size="sm" onClick={nextLevel} className="w-full">SKIP LEVEL</Button>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('speed')} className="text-blue-400">Speed</Button>
-                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('time')} className="text-yellow-400">Time</Button>
-                                            <Button variant="outline" size="sm" onClick={() => spawnPowerUp('ghost')} className="text-purple-400">Ghost</Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </DialogContent>
-                        </Dialog>
+                                </div>
+                            )}
+                        </Modal>
                     </div>
                     {/* STORY CUTSCENE OVERLAY */}
                     {storyState !== 'none' && (
