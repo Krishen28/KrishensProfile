@@ -45,8 +45,13 @@
             background-color: #050510;
             color: #e0f7fa;
             background-image: radial-gradient(circle at center, hsla(270, 50%, 10%, 0.5) 0%, transparent 100%);
+            margin: 0;
+            overflow: hidden;
         }
         .text-glow { text-shadow: 0 0 10px currentColor; }
+        .text-glow-white { text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+        
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #111; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
@@ -102,6 +107,7 @@
         const ShoppingCart = (p) => <Icon name="ShoppingCart" {...p} />;
         const Coins = (p) => <Icon name="Coins" {...p} />;
         const X = (p) => <Icon name="X" {...p} />;
+        const Ticket = (p) => <Icon name="Ticket" {...p} />;
         // --- UI COMPONENTS ---
         const Button = ({ children, className, variant = "default", size = "default", ...props }) => {
             const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
@@ -302,7 +308,7 @@
                 }
             };
             return (
-                <div className={`relative rounded-lg border-2 transition-colors duration-300 ${isSpeedActive ? 'border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)]' : 'border-neon-cyan/50 shadow-[0_0_30px_rgba(0,255,255,0.15)]'} bg-black/80 p-4 backdrop-blur-sm`}>
+                <div className={`relative rounded-lg border-2 transition-colors duration-300 ${isSpeedActive ? 'border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)]' : 'border-neon-cyan shadow-[0_0_20px_rgba(0,255,255,0.3)]'} bg-black/50 p-4 backdrop-blur-sm`}>
                     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
                         <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
                         <AnimatePresence>
@@ -395,13 +401,6 @@
                     return () => clearInterval(chaosInterval);
                 }
             }, [level, gameState, storyState, playerPos]);
-            const getDifficultyColor = (lvl) => {
-                if (lvl === 25) return "bg-red-950 shadow-[0_0_30px_rgba(255,0,0,1)] animate-pulse border-4 border-red-600";
-                if (lvl % 5 === 0) return "bg-red-600 shadow-[0_0_15px_rgba(220,38,38,1)] animate-pulse";
-                if (lvl <= 3) return "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]";
-                if (lvl <= 7) return "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)]";
-                return "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]";
-            };
             const initLevel = useCallback((lvl) => {
                 const isBossLevel = lvl % 5 === 0;
                 let width, height;
@@ -520,66 +519,42 @@
             };
             if (!maze.length) return null;
             return (
-                <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 font-mono relative overflow-hidden">
-                    <div className="w-full max-w-4xl flex justify-between items-end mb-6 px-4 z-10">
-                        <div className="flex flex-col gap-2">
-                            <div>
-                                <h2 className="text-neon-purple text-sm mb-1 tracking-widest uppercase opacity-80">Level</h2>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2 bg-yellow-900/40 border border-yellow-600/50 px-3 py-1 rounded text-yellow-400 font-mono text-sm animate-pulse"><Coins size={14} /> {coins}</div>
-                                    <div className={`text-4xl font-press text-glow ${level % 5 === 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{String(level).padStart(2, '0')}</div>
-                                    <div className={`w-4 h-4 rounded-full ${getDifficultyColor(level)}`} />
-                                    {level % 5 === 0 && <Skull className="text-red-500 animate-bounce" />}
-                                </div>
+                <div className="min-h-screen bg-background flex items-center justify-center font-mono relative overflow-hidden">
+                    
+                    {/* --- LAYOUT MATCHING SCREENSHOT --- */}
+                    
+                    {/* LEVEL INDICATOR (Left) */}
+                    <div className="absolute left-[15%] top-[25%] flex flex-col items-start z-10">
+                        <h2 className="text-neon-purple text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">LEVEL</h2>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-center w-8 h-8 bg-yellow-900/40 border border-yellow-600/50 rounded">
+                                <Ticket size={16} className="text-yellow-500" />
                             </div>
-                            <div className="flex gap-2 min-h-[24px]">
-                                {isSpeedActive && <div className="flex items-center gap-1 text-xs text-blue-400 animate-pulse"><Zap size={12} /> SPEED</div>}
-                                {isGhostActive && <div className="flex items-center gap-1 text-xs text-purple-400 animate-pulse"><Footprints size={12} /> GHOST</div>}
-                                {isTimeFrozenPowerup && <div className="flex items-center gap-1 text-xs text-cyan-400 animate-pulse"><Snowflake size={12} /> FROZEN</div>}
-                                {solutionPath && <div className="flex items-center gap-1 text-xs text-green-400 animate-pulse"><Eye size={12} /> VISION</div>}
-                                {isTimeFrozen && <div className="flex items-center gap-1 text-xs text-red-400 animate-pulse"><ShieldAlert size={12} /> FROZEN (ADMIN)</div>}
+                            <div className="text-4xl font-press text-white text-glow-white">
+                                {String(level).padStart(2, '0')}
                             </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                            <h2 className="text-neon-pink text-sm mb-1 tracking-widest uppercase opacity-80">Time</h2>
-                            <div className={`text-4xl font-press text-glow ${timeLeft < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{Math.floor(timeLeft)}s</div>
+                            <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
                         </div>
                     </div>
-                    <div className="relative z-10">
+                    {/* TIME INDICATOR (Right) */}
+                    <div className="absolute right-[15%] top-[25%] flex flex-col items-end z-10">
+                        <h2 className="text-neon-pink text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">TIME</h2>
+                        <div className="text-4xl font-press text-white text-glow-white">
+                            {Math.floor(timeLeft)}s
+                        </div>
+                    </div>
+                    {/* MAZE (Center) */}
+                    <div className="relative z-20 scale-125">
                         <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
-                        {storyState !== 'none' && (
-                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-8 rounded-lg">
-                                <div className="text-center space-y-8">
-                                    <Skull className="w-32 h-32 text-red-600 animate-bounce mx-auto" />
-                                    <div className="bg-gray-900/80 border-2 border-red-800 p-6 rounded-lg"><p className="font-press text-red-500 text-lg">{currentDialog[storyStep]}</p></div>
-                                    <Button onClick={advanceStory} className="bg-red-700 hover:bg-red-600 text-white font-press py-6 px-12 w-full">{storyStep < currentDialog.length - 1 ? "NEXT >" : "FIGHT!"}</Button>
-                                </div>
-                            </div>
-                        )}
-                        {gameState !== "playing" && !showCutscene && (
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-lg z-20">
-                                <Card className="bg-black border-2 border-white p-8 text-center w-80">
-                                    {gameState === "won" ? (
-                                        <>
-                                            <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-                                            <h2 className="text-2xl font-press text-green-400 mb-2">ESCAPED!</h2>
-                                            <Button onClick={nextLevel} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Timer className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                                            <h2 className="text-2xl font-press text-red-500 mb-2">TIME OUT</h2>
-                                            <Button onClick={retry} className="w-full bg-white hover:bg-gray-200 text-black font-bold font-press mt-4 py-6">TRY AGAIN</Button>
-                                            <Button variant="ghost" onClick={() => setLevel(1)} className="w-full text-gray-500 mt-2">Reset</Button>
-                                        </>
-                                    )}
-                                </Card>
-                            </div>
-                        )}
                     </div>
-                    <div className="fixed bottom-4 left-4 flex gap-2">
+                    {/* BOTTOM CONTROLS */}
+                    <div className="fixed bottom-8 left-8 z-30 flex gap-4">
+                        <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white ${packsAvailable > 0 ? 'animate-pulse border-neon-purple text-white' : ''}`}>
+                            <Package className="w-4 h-4 mr-2" /> PACKS ({packsAvailable})
+                        </Button>
+                        
                         <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
-                            <DialogTrigger><Button className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold font-mono text-xs border border-yellow-400"><ShoppingCart className="w-4 h-4 mr-2" /> SHOP</Button></DialogTrigger>
+                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white"><ShoppingCart className="w-4 h-4 mr-2" /> SHOP</Button></DialogTrigger>
                             <DialogContent className="bg-black border-yellow-500 text-white font-mono max-w-md">
                                 <DialogHeader>
                                     <DialogTitle className="text-yellow-500 font-press text-sm flex items-center gap-2"><ShoppingCart size={18} /> BLACK MARKET</DialogTitle>
@@ -595,9 +570,8 @@
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`relative font-mono text-xs ${packsAvailable > 0 ? 'bg-neon-purple hover:bg-purple-600 text-white animate-pulse' : 'bg-gray-900 text-gray-500 border-gray-800'}`}><Package className="w-4 h-4 mr-2" /> PACKS ({packsAvailable})</Button>
                         <Dialog open={isSkinsOpen} onOpenChange={setIsSkinsOpen}>
-                            <DialogTrigger><Button variant="ghost" size="sm" className="text-xs text-gray-700 hover:text-neon-cyan font-mono opacity-50 hover:opacity-100"><Palette className="w-4 h-4 mr-1" /> SKINS</Button></DialogTrigger>
+                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white"><Palette className="w-4 h-4 mr-2" /> SKINS</Button></DialogTrigger>
                             <DialogContent className="bg-black border-neon-cyan text-white font-mono max-w-md">
                                 <DialogHeader><DialogTitle className="text-neon-cyan font-press text-sm">CUSTOMIZATION</DialogTitle></DialogHeader>
                                 <div className="grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-2">
@@ -622,8 +596,9 @@
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
-                            <DialogTrigger><Button variant="ghost" size="sm" className="text-xs text-gray-700 hover:text-neon-purple font-mono opacity-50 hover:opacity-100">ADMIN</Button></DialogTrigger>
+                        
+                         <Dialog open={isAdminOpen} onOpenChange={setIsAdminOpen}>
+                            <DialogTrigger><Button className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">ADMIN</Button></DialogTrigger>
                             <DialogContent className="bg-black border-neon-purple text-white font-mono">
                                 <DialogHeader><DialogTitle className="text-neon-purple font-press text-sm">SYSTEM OVERRIDE</DialogTitle></DialogHeader>
                                 {!isAdminAuthenticated ? (
@@ -646,6 +621,39 @@
                             </DialogContent>
                         </Dialog>
                     </div>
+                    {/* STORY CUTSCENE OVERLAY */}
+                    {storyState !== 'none' && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-8 rounded-lg">
+                            <div className="text-center space-y-8">
+                                <Skull className="w-32 h-32 text-red-600 animate-bounce mx-auto" />
+                                <div className="bg-gray-900/80 border-2 border-red-800 p-6 rounded-lg"><p className="font-press text-red-500 text-lg">{currentDialog[storyStep]}</p></div>
+                                <Button onClick={advanceStory} className="bg-red-700 hover:bg-red-600 text-white font-press py-6 px-12 w-full">{storyStep < currentDialog.length - 1 ? "NEXT >" : "FIGHT!"}</Button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* GAME OVER / VICTORY OVERLAY */}
+                    {gameState !== "playing" && !showCutscene && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-lg z-20">
+                            <Card className="bg-black border-2 border-white p-8 text-center w-80">
+                                {gameState === "won" ? (
+                                    <>
+                                        <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                                        <h2 className="text-2xl font-press text-green-400 mb-2">ESCAPED!</h2>
+                                        <Button onClick={nextLevel} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Timer className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                                        <h2 className="text-2xl font-press text-red-500 mb-2">TIME OUT</h2>
+                                        <Button onClick={retry} className="w-full bg-white hover:bg-gray-200 text-black font-bold font-press mt-4 py-6">TRY AGAIN</Button>
+                                        <Button variant="ghost" onClick={() => setLevel(1)} className="w-full text-gray-500 mt-2">Reset</Button>
+                                    </>
+                                )}
+                            </Card>
+                        </div>
+                    )}
+                    {/* OPENING PACK ANIMATION */}
                     {isOpeningPack && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md">
                             <div className="flex flex-col items-center text-center">
