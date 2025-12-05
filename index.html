@@ -694,9 +694,8 @@
             const [toasts, setToasts] = useState([]);
             const toast = useCallback(({ title, description, className, variant }) => {
                 const id = Date.now();
-                setToasts(prev => [...prev, { id, title, description, className, variant }]);
-                // Fixed: 1 second duration for notifications
-                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 1000);
+                setToasts(prev => [...prev, { id, title, description, className, variant }].slice(-3));
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 1500);
             }, []);
             return (
                 <ToastContext.Provider value={{ toasts, toast }}>
