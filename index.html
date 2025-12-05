@@ -54,6 +54,18 @@
             background-color: hsl(240, 20%, 3%);
             color: white;
         }
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+            50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 1s infinite;
+        }
+        .typing-effect::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -288,29 +300,141 @@
             const [adminCode, setAdminCode] = useState("");
             const [isAdmin, setIsAdmin] = useState(false);
             const [isTimeFrozen, setIsTimeFrozen] = useState(false);
+            const [isVisionUnlimited, setIsVisionUnlimited] = useState(false);
             const [showSkins, setShowSkins] = useState(false);
+            const [showCutscene, setShowCutscene] = useState(false);
+            // Story
+            const [storyState, setStoryState] = useState('intro');
+            const [storyStep, setStoryStep] = useState(0);
+            const introDialog = [
+                "Welcome, little dot...",
+                "I am the ARCHITECT of this Neon Labyrinth.",
+                "You seem lost. Good.",
+                "Escape is impossible, but you are welcome to try.",
+                "Survive my trials, and perhaps I will let you leave...",
+                "BEGIN!"
+            ];
+            const level25Dialog = [
+                "IMPRESSIVE...",
+                "You actually survived this long?",
+                "But your luck ends HERE.",
+                "I'm done playing fair.",
+                "Let's see how you handle... TRUE CHAOS!",
+                "DIE!"
+            ];
+            const victoryDialog = [
+                "NO...",
+                "IMPOSSIBLE!",
+                "My masterpiece... RUINED!",
+                "You have bested me, anomaly.",
+                "The labyrinth is yours.",
+                "Begone."
+            ];
+            const currentDialog = storyState === 'intro' ? introDialog : storyState === 'level25_intro' ? level25Dialog : victoryDialog;
             const CELL_SIZE = 25;
+            const advanceStory = () => {
+                if (storyStep < currentDialog.length - 1) {
+                    setStoryStep(s => s + 1);
+                } else {
+                    setStoryState('none');
+                    setStoryStep(0);
+                    if (storyState === 'intro' || storyState === 'level25_intro') {
+                        setGameState("playing");
+                    } else if (storyState === 'victory') {
+                        setGameState("won");
+                    }
+                }
+            };
+            const getDifficultyColor = (lvl) => {
+                if (lvl === 25) return "bg-red-900 shadow-[0_0_30px_rgba(255,0,0,1)] animate-pulse border-2 border-red-600";
+                if (lvl % 5 === 0) return "bg-red-600 shadow-[0_0_15px_rgba(220,38,38,1)] animate-pulse";
+                if (lvl <= 3) return "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]";
+                if (lvl <= 7) return "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)]";
+                return "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]";
+            };
             const initLevel = useCallback((lvl) => {
-                const isBoss = lvl % 5 === 0;
-                const width = isBoss ? 30 : Math.min(10 + lvl * 2, 30);
-                const height = isBoss ? 20 : Math.min(10 + lvl * 2, 20);
+                const isBossLevel = lvl % 5 === 0;
+                
+                let width, height;
+                if (isBossLevel) {
+                    width = 30;
+                    height = 20;
+                    if (lvl === 25) {
+                        setStoryState('level25_intro');
+                    }
+                } else {
+                    width = Math.min(10 + lvl * 2, 30);
+                    height = Math.min(10 + lvl * 2, 20);
+                    if (lvl % 6 === 0 && lvl !== 25 && lvl > 1) {
+                        const taunts = ["Still alive? How tedious.", "I'm just warming up.", "You run like a scared mouse.", "This maze has no end, fool.", "Do you really think you can escape?", "My patience is wearing thin."];
+                        const taunt = taunts[Math.floor(Math.random() * taunts.length)];
+                        // Using alert for simplicity in portable version for taunts, or custom toast could be added
+                        // For this version, we'll skip the toast to keep it simple or assume user sees cutscenes
+                    }
+                }
                 
                 const newMaze = generateMaze(width, height);
                 setMaze(newMaze);
                 setPlayerPos({ x: 0, y: 0 });
                 
-                const baseTime = Math.max(30 - (lvl * 1.5), 15);
-                const sizeFactor = (width * height) / 20;
-                setTimeLeft(baseTime + sizeFactor);
+                let newTimeLimit;
+                if (lvl <= 3) newTimeLimit = 50;
+                else if (lvl <= 7) newTimeLimit = 60;
+                else newTimeLimit = 110;
                 
-                setGameState("playing");
+                setTimeLeft(newTimeLimit);
+                
+                // Don't reset playing state immediately if we are in a story
+                if (lvl === 1 && storyState === 'intro') {} // wait for story
+                else if (lvl === 25) {} // wait for story
+                else setGameState("playing");
                 setSolutionPath(null);
                 setIsSpeedActive(false);
                 setIsTimeFrozen(false);
+                setIsVisionUnlimited(false);
+                setShowCutscene(false);
             }, []);
-            useEffect(() => { initLevel(level); }, [level, initLevel]);
+            // Initial load
             useEffect(() => {
-                if (gameState !== "playing" || isTimeFrozen) return;
+                // On mount, level is 1, initLevel called.
+                // But we want story first.
+                setStoryState('intro');
+                setStoryStep(0);
+                const newMaze = generateMaze(12, 12); // Lvl 1 size
+                setMaze(newMaze);
+                setTimeLeft(50);
+            }, []);
+            // Level 25 Chaos
+            useEffect(() => {
+                if (level === 25 && gameState === "playing" && storyState === 'none') {
+                    const interval = setInterval(() => {
+                        setMaze(prev => {
+                            const newMaze = generateMaze(prev[0].length, prev.length);
+                            const {x, y} = playerPos;
+                            if (newMaze[y] && newMaze[y][x]) {
+                                newMaze[y][x].top = false; newMaze[y][x].bottom = false;
+                                newMaze[y][x].left = false; newMaze[y][x].right = false;
+                                if(y>0) newMaze[y-1][x].bottom=false;
+                                if(y<newMaze.length-1) newMaze[y+1][x].top=false;
+                                if(x>0) newMaze[y][x-1].right=false;
+                                if(x<newMaze[0].length-1) newMaze[y][x+1].left=false;
+                            }
+                            return newMaze;
+                        });
+                    }, 8000);
+                    return () => clearInterval(interval);
+                }
+            }, [level, gameState, storyState, playerPos]);
+            useEffect(() => {
+                if (isVisionUnlimited && maze.length > 0) {
+                    const path = solveMaze(maze, playerPos, {x: maze[0].length-1, y: maze.length-1});
+                    setSolutionPath(path);
+                } else if (!isVisionUnlimited && !isSpeedActive && solutionPath) {
+                    setSolutionPath(null);
+                }
+            }, [isVisionUnlimited, playerPos, maze, isSpeedActive]);
+            useEffect(() => {
+                if (gameState !== "playing" || isTimeFrozen || storyState !== 'none') return;
                 const timer = setInterval(() => {
                     setTimeLeft(t => {
                         if (t <= 1) { setGameState("lost"); return 0; }
@@ -318,9 +442,9 @@
                     });
                 }, 1000);
                 return () => clearInterval(timer);
-            }, [gameState, isTimeFrozen]);
+            }, [gameState, isTimeFrozen, storyState]);
             useEffect(() => {
-                if (gameState !== "playing") return;
+                if (gameState !== "playing" || showCutscene || storyState !== 'none') return;
                 const handleKeyDown = (e) => {
                     if (e.target.tagName === "INPUT") return;
                     const { x, y } = playerPos;
@@ -349,12 +473,22 @@
                                 setTimeout(() => setSolutionPath(null), 2000);
                             }
                         }
-                        if (nx === maze[0].length - 1 && ny === maze.length - 1) setGameState("won");
+                        if (nx === maze[0].length - 1 && ny === maze.length - 1) {
+                            if (level === 25) {
+                                setStoryState('victory');
+                            } else {
+                                setShowCutscene(true);
+                                setTimeout(() => {
+                                    setShowCutscene(false);
+                                    setGameState("won");
+                                }, 1000);
+                            }
+                        }
                     }
                 };
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [playerPos, maze, gameState]);
+            }, [playerPos, maze, gameState, showCutscene, storyState]);
             const spawnItem = (type) => {
                 const newMaze = [...maze];
                 for(let i=0; i<100; i++) {
@@ -375,6 +509,7 @@
                 if (nextLvl === 20 && !newUnlocked.includes('master')) { newUnlocked.push('master'); alert("UNLOCKED: Grandmaster Crown!"); }
                 setUnlockedSkins(newUnlocked);
                 setLevel(nextLvl);
+                initLevel(nextLvl);
             };
             if (!maze.length) return null;
             return (
@@ -388,12 +523,14 @@
                                 <div className={`text-4xl font-press text-glow ${level % 5 === 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                                     {String(level).padStart(2, '0')}
                                 </div>
+                                <div className={`w-4 h-4 rounded-full ${getDifficultyColor(level)} transition-colors`}></div>
                                 {level % 5 === 0 && <Skull className="text-red-500 animate-bounce" width={20} />}
                             </div>
                             <div className="flex gap-2 mt-2 text-xs">
                                 {isSpeedActive && <span className="text-blue-400 flex items-center"><Zap width={12}/> SPEED</span>}
                                 {solutionPath && <span className="text-green-400 flex items-center"><Eye width={12}/> VISION</span>}
                                 {isTimeFrozen && <span className="text-red-400 flex items-center"><ShieldAlert width={12}/> FROZEN</span>}
+                                {isVisionUnlimited && <span className="text-green-400 flex items-center"><Eye width={12}/> UNLIMITED</span>}
                             </div>
                         </div>
                         <div className="text-right">
@@ -402,7 +539,37 @@
                         </div>
                     </div>
                     <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
-                    {gameState !== "playing" && (
+                    {/* Story / Dialog Overlay */}
+                    {storyState !== 'none' && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 p-8">
+                            <div className="max-w-lg w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">
+                                <div className="relative inline-block">
+                                <Skull className="w-32 h-32 text-red-600 animate-bounce mx-auto drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]" />
+                                <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse"></div>
+                                </div>
+                                <div className="bg-gray-900/80 border-2 border-red-800 p-6 rounded-lg shadow-[0_0_20px_rgba(220,38,38,0.3)] min-h-[150px] flex flex-col justify-center items-center">
+                                <p className="font-press text-red-500 text-lg leading-relaxed typing-effect">
+                                    "{currentDialog[storyStep]}"
+                                </p>
+                                </div>
+                                <button onClick={advanceStory} className="bg-red-700 hover:bg-red-600 text-white font-press text-sm py-6 px-12 w-full animate-pulse rounded">
+                                {storyStep < currentDialog.length - 1 ? "NEXT >" : "FIGHT!"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {/* Cutscene Overlay */}
+                    {showCutscene && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
+                            <div className="text-center animate-pulse">
+                                <Trophy className="w-24 h-24 text-yellow-400 mx-auto mb-4 animate-bounce-slow" width={96} height={96} />
+                                <h2 className="text-4xl font-press text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">
+                                LEVEL CLEARED
+                                </h2>
+                            </div>
+                        </div>
+                    )}
+                    {gameState !== "playing" && !showCutscene && storyState === 'none' && (
                         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-20">
                             <div className="bg-black border-2 border-white p-8 text-center rounded max-w-sm w-full shadow-[0_0_50px_rgba(255,255,255,0.2)]">
                                 {gameState === "won" ? (
@@ -478,6 +645,10 @@
                                             <span className="text-xs">FREEZE TIME</span>
                                             <button onClick={() => setIsTimeFrozen(!isTimeFrozen)} className={`w-8 h-4 rounded-full ${isTimeFrozen ? 'bg-red-500' : 'bg-gray-600'}`}></button>
                                         </div>
+                                        <div className="flex justify-between items-center bg-gray-900 p-2 rounded">
+                                            <span className="text-xs">UNLIMITED VISION</span>
+                                            <button onClick={() => setIsVisionUnlimited(!isVisionUnlimited)} className={`w-8 h-4 rounded-full ${isVisionUnlimited ? 'bg-green-500' : 'bg-gray-600'}`}></button>
+                                        </div>
                                         <button onClick={nextLevel} className="w-full bg-gray-800 border border-gray-600 text-white text-xs py-2 rounded flex items-center justify-center gap-2"><SkipForward width={14}/> SKIP LEVEL</button>
                                         <div className="grid grid-cols-3 gap-2">
                                             <button onClick={() => spawnItem('speed')} className="border border-blue-500 text-blue-400 text-xs py-2 rounded">SPD</button>
@@ -498,3 +669,4 @@
         root.render(<Game />);
     </script>
 </body>
+</html>
