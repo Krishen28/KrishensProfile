@@ -108,6 +108,7 @@
         const Coins = (p) => <Icon name="Coins" {...p} />;
         const X = (p) => <Icon name="X" {...p} />;
         const Ticket = (p) => <Icon name="Ticket" {...p} />;
+        const Play = (p) => <Icon name="Play" {...p} />;
         // --- UI COMPONENTS ---
         const Button = ({ children, className, variant = "default", size = "default", ...props }) => {
             const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
@@ -337,6 +338,7 @@
         const ADMIN_CODE = "sussybaka120956";
         function Game() {
             const { toast } = useToast();
+            const [gameStarted, setGameStarted] = useState(false);
             const [level, setLevel] = useState(1);
             const [maze, setMaze] = useState([]);
             const [playerPos, setPlayerPos] = useState({ x: 0, y: 0 });
@@ -387,6 +389,7 @@
                 }
             }, [isVisionUnlimited, isVisionPowerupActive, playerPos, maze]);
             useEffect(() => {
+                if (!gameStarted) return;
                 if (level === 25 && gameState === "playing" && storyState === 'none') {
                     const chaosInterval = setInterval(() => {
                         setMaze(prev => {
@@ -404,7 +407,7 @@
                     }, 8000);
                     return () => clearInterval(chaosInterval);
                 }
-            }, [level, gameState, storyState, playerPos]);
+            }, [level, gameState, storyState, playerPos, gameStarted]);
             const initLevel = useCallback((lvl) => {
                 const isBossLevel = lvl % 5 === 0;
                 let width, height;
@@ -427,14 +430,16 @@
                 setIsSpeedActive(false); setIsGhostActive(false); setIsTimeFrozenPowerup(false); setIsVisionPowerupActive(false);
                 setIsTimeFrozen(false); setIsVisionUnlimited(false); setShowCutscene(false);
             }, []);
-            useEffect(() => { initLevel(level); }, [level, initLevel]);
+            useEffect(() => { if (gameStarted) initLevel(level); }, [level, initLevel, gameStarted]);
             useEffect(() => {
+                if (!gameStarted) return;
                 if (gameState !== "playing") return;
                 if (isTimeFrozen || isTimeFrozenPowerup || storyState !== 'none') return;
                 const timer = setInterval(() => { setTimeLeft((t) => { if (t <= 1) { setGameState("lost"); return 0; } return t - 1; }); }, 1000);
                 return () => clearInterval(timer);
-            }, [gameState, isTimeFrozen, isTimeFrozenPowerup, storyState]);
+            }, [gameState, isTimeFrozen, isTimeFrozenPowerup, storyState, gameStarted]);
             useEffect(() => {
+                if (!gameStarted) return;
                 if (gameState !== "playing" || showCutscene) return;
                 const handleKeyDown = (e) => {
                     if (document.activeElement?.tagName === "INPUT") return;
@@ -464,7 +469,6 @@
                         if (nextX === maze[0].length - 1 && nextY === maze.length - 1) {
                             if (level === 25) setStoryState('victory');
                             else { 
-                                // FIXED: Instant win without cutscene delay for normal levels
                                 setGameState("won");
                             }
                         }
@@ -472,7 +476,7 @@
                 };
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [playerPos, maze, gameState, isSpeedActive]);
+            }, [playerPos, maze, gameState, isSpeedActive, gameStarted]);
             const openPack = () => { if (packsAvailable <= 0 || isOpeningPack) return; setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
             const revealPack = () => {
                 if (openingStage !== 'ready') return;
@@ -522,56 +526,49 @@
                 }
             };
             
+            // IMPROVED SPAWN LOGIC: BFS to find NEAREST empty cell
             const spawnPowerUpNearPlayer = (type) => {
                 if (!maze.length) return;
                 const { x, y } = playerPos;
-                // Find accessible neighbors
-                const neighbors = [];
-                const currentCell = maze[y][x];
                 
-                if (!currentCell.top && y > 0) neighbors.push({ x, y: y - 1 });
-                if (!currentCell.bottom && y < maze.length - 1) neighbors.push({ x, y: y + 1 });
-                if (!currentCell.left && x > 0) neighbors.push({ x: x - 1, y });
-                if (!currentCell.right && x < maze[0].length - 1) neighbors.push({ x: x + 1, y });
+                const queue = [{x, y, dist: 0}];
+                const visited = new Set([`${x},${y}`]);
+                const maxDist = 6; // Search radius
                 
-                // Shuffle to pick a random accessible neighbor
-                for (let i = neighbors.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [neighbors[i], neighbors[j]] = [neighbors[j], neighbors[i]];
-                }
-                
-                let placed = false;
-                for (const n of neighbors) {
-                    if (!maze[n.y][n.x].item) {
-                        const newMaze = [...maze];
-                        newMaze[n.y][n.x] = { ...newMaze[n.y][n.x], item: type };
-                        setMaze(newMaze);
-                        placed = true;
+                let target = null;
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    
+                    // Found an empty spot that isn't player position
+                    if ((current.x !== x || current.y !== y) && !maze[current.y][current.x].item) {
+                        target = current;
                         break;
                     }
-                }
-                
-                // If no accessible neighbor empty, try any neighbor
-                if (!placed) {
-                    const allNeighbors = [
-                        { x: x, y: y - 1 }, { x: x, y: y + 1 }, { x: x - 1, y }, { x: x + 1, y }
-                    ].filter(n => n.x >= 0 && n.x < maze[0].length && n.y >= 0 && n.y < maze.length);
                     
-                    for (const n of allNeighbors) {
-                        if (!maze[n.y][n.x].item) {
-                            const newMaze = [...maze];
-                            newMaze[n.y][n.x] = { ...newMaze[n.y][n.x], item: type };
-                            setMaze(newMaze);
-                            placed = true;
-                            break;
+                    if (current.dist >= maxDist) continue;
+                    // Check accessible neighbors (respecting walls for true path distance)
+                    const cell = maze[current.y][current.x];
+                    const neighbors = [];
+                    if (!cell.top && current.y > 0) neighbors.push({x: current.x, y: current.y - 1});
+                    if (!cell.bottom && current.y < maze.length - 1) neighbors.push({x: current.x, y: current.y + 1});
+                    if (!cell.left && current.x > 0) neighbors.push({x: current.x - 1, y: current.y});
+                    if (!cell.right && current.x < maze[0].length - 1) neighbors.push({x: current.x + 1, y: current.y});
+                    for (const n of neighbors) {
+                        const key = `${n.x},${n.y}`;
+                        if (!visited.has(key)) {
+                            visited.add(key);
+                            queue.push({...n, dist: current.dist + 1});
                         }
                     }
                 }
-                
-                if (placed) {
+                if (target) {
+                    const newMaze = [...maze];
+                    newMaze[target.y][target.x] = { ...newMaze[target.y][target.x], item: type };
+                    setMaze(newMaze);
                     toast({ title: "Item Spawned", description: `${type} appeared nearby!`, className: "bg-slate-800 border-slate-600 text-white" });
                 } else {
-                    spawnPowerUp(type); // Fallback to random if somehow completely blocked
+                    // Fallback if boxed in (e.g., start of level)
+                     spawnPowerUp(type);
                 }
             };
             const spawnPowerUp = (type) => {
@@ -586,6 +583,37 @@
                 }
                 if (placed) { setMaze(newMaze); toast({ title: "Item Spawned", description: `Spawned ${type}`, className: "bg-slate-800 border-slate-600 text-white" }); }
             };
+            // START SCREEN
+            if (!gameStarted) {
+                return (
+                    <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden font-press text-white">
+                        {/* Background Grid */}
+                        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ 
+                            backgroundImage: 'linear-gradient(transparent 95%, #00ffff 95%), linear-gradient(90deg, transparent 95%, #ff00ff 95%)',
+                            backgroundSize: '40px 40px',
+                            transform: 'perspective(500px) rotateX(60deg) translateY(100px) scale(2)'
+                        }}></div>
+                        
+                        <div className="z-10 text-center space-y-12">
+                            <div className="space-y-4">
+                                <h1 className="text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse">STONE</h1>
+                                <h1 className="text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-neon-cyan to-blue-600 drop-shadow-[0_0_25px_rgba(0,255,255,0.8)]">LABYRINTH</h1>
+                            </div>
+                            
+                            <div className="flex flex-col items-center gap-6">
+                                <Button onClick={() => setGameStarted(true)} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
+                                    <Play className="mr-4 w-6 h-6" fill="currentColor" /> START GAME
+                                </Button>
+                                <p className="text-gray-500 text-xs font-mono animate-pulse">INSERT COIN TO PLAY</p>
+                            </div>
+                            
+                            <div className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-gray-600 font-mono">
+                                V.2.0.4 - PORTABLE EDITION
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
             if (!maze.length) return null;
             return (
                 <div className="min-h-screen bg-background flex items-center justify-center font-mono relative overflow-hidden">
