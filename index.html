@@ -70,7 +70,7 @@
         const Clock = (props) => <Icon d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-14v6l4 2" {...props} />;
         const Eye = (props) => <Icon d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" {...props} />;
         const Trophy = (props) => <Icon d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 0h1.5a2.5 2.5 0 0 1 0 5H18M4 22h16v-3h-2V9a6 6 0 1 0-12 0v10H4v3zm2-16h12" {...props} />;
-        const TimerIcon = (props) => <Icon d="M12 2v20M2 12h20" {...props} />; // Simplified timer
+        const TimerIcon = (props) => <Icon d="M12 2v20M2 12h20" {...props} />;
         const ArrowLeft = (props) => <Icon d="M19 12H5M12 19l-7-7 7-7" {...props} />;
         const Lock = (props) => <Icon d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zm-7-4a4 4 0 0 1 4 4v4h-8v-4a4 4 0 0 1 4-4z" {...props} />;
         const Unlock = (props) => <Icon d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zm-7-4a4 4 0 0 1 4 4v4h-2v-4a2 2 0 1 0-4 0v4h-2v-4a4 4 0 0 1 8 0z" {...props} />;
@@ -84,6 +84,10 @@
         const Box = (props) => <Icon d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12" {...props} />;
         const Triangle = (props) => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" {...props} />;
         const Circle = (props) => <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} {...props}><circle cx="12" cy="12" r="10" /></svg>;
+        
+        const Sword = (props) => <Icon d="M14.5 17.5L3 6V3h3l11.5 11.5m-5 5L21 21l-1.5-1.5L19 19m-2-2l1.5-1.5L17 14" {...props} />;
+        const Star = (props) => <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" {...props} />;
+        const Crown = (props) => <Icon d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" {...props} />;
         // --- MAZE LOGIC ---
         function generateMaze(width, height) {
             const grid = [];
@@ -225,6 +229,10 @@
                 if (skin === 'cube') return <Box {...props} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />;
                 if (skin === 'triangle') return <Triangle {...props} className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />;
                 if (skin === 'ghost') return <Ghost {...props} className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />;
+                
+                if (skin === 'slayer') return <Sword {...props} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />;
+                if (skin === 'ninja') return <Star {...props} className="text-purple-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />;
+                if (skin === 'master') return <Crown {...props} className="text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" />;
                 return <Circle {...props} className="text-neon-pink drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" />;
             };
             return (
@@ -273,6 +281,7 @@
             const [solutionPath, setSolutionPath] = useState(null);
             const [isSpeedActive, setIsSpeedActive] = useState(false);
             const [activeSkin, setActiveSkin] = useState('orb');
+            const [unlockedSkins, setUnlockedSkins] = useState(['orb', 'cube', 'triangle', 'ghost']);
             
             // Admin
             const [showAdmin, setShowAdmin] = useState(false);
@@ -358,6 +367,15 @@
                     }
                 }
             };
+            const nextLevel = () => {
+                const nextLvl = level + 1;
+                const newUnlocked = [...unlockedSkins];
+                if (nextLvl === 5 && !newUnlocked.includes('slayer')) { newUnlocked.push('slayer'); alert("UNLOCKED: Boss Slayer Skin!"); }
+                if (nextLvl === 10 && !newUnlocked.includes('ninja')) { newUnlocked.push('ninja'); alert("UNLOCKED: Neon Ninja Skin!"); }
+                if (nextLvl === 20 && !newUnlocked.includes('master')) { newUnlocked.push('master'); alert("UNLOCKED: Grandmaster Crown!"); }
+                setUnlockedSkins(newUnlocked);
+                setLevel(nextLvl);
+            };
             if (!maze.length) return null;
             return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-4 font-mono relative overflow-hidden">
@@ -391,7 +409,7 @@
                                     <>
                                         <Trophy className="mx-auto mb-4 text-yellow-400" width={48} height={48} />
                                         <h2 className="text-2xl font-press text-green-400 mb-4">ESCAPED!</h2>
-                                        <button onClick={() => setLevel(l => l+1)} className="w-full bg-neon-cyan text-black font-bold font-press py-4 rounded hover:bg-cyan-400">NEXT LEVEL</button>
+                                        <button onClick={nextLevel} className="w-full bg-neon-cyan text-black font-bold font-press py-4 rounded hover:bg-cyan-400">NEXT LEVEL</button>
                                     </>
                                 ) : (
                                     <>
@@ -416,12 +434,25 @@
                         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
                             <div className="bg-black border border-neon-cyan p-6 rounded w-80">
                                 <h3 className="font-press text-neon-cyan mb-4 text-sm">CUSTOMIZATION</h3>
-                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                <div className="grid grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto">
                                     {['orb','cube','triangle','ghost'].map(s => (
                                         <button key={s} onClick={() => setActiveSkin(s)} className={`p-2 border rounded capitalize ${activeSkin === s ? 'border-neon-pink bg-pink-900/20' : 'border-gray-800'}`}>
                                             {s}
                                         </button>
                                     ))}
+                                    
+                                    <button disabled={!unlockedSkins.includes('slayer')} onClick={() => setActiveSkin('slayer')} className={`p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('slayer') ? 'opacity-50 border-gray-800' : activeSkin === 'slayer' ? 'border-red-500 bg-red-900/20' : 'border-gray-800'}`}>
+                                        <span>Slayer</span>
+                                        {!unlockedSkins.includes('slayer') && <span className="text-[10px] text-red-400 flex items-center gap-1"><Lock size={8}/> Lvl 5</span>}
+                                    </button>
+                                    <button disabled={!unlockedSkins.includes('ninja')} onClick={() => setActiveSkin('ninja')} className={`p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('ninja') ? 'opacity-50 border-gray-800' : activeSkin === 'ninja' ? 'border-purple-500 bg-purple-900/20' : 'border-gray-800'}`}>
+                                        <span>Ninja</span>
+                                        {!unlockedSkins.includes('ninja') && <span className="text-[10px] text-purple-400 flex items-center gap-1"><Lock size={8}/> Lvl 10</span>}
+                                    </button>
+                                    <button disabled={!unlockedSkins.includes('master')} onClick={() => setActiveSkin('master')} className={`col-span-2 p-2 border rounded flex flex-col items-center ${!unlockedSkins.includes('master') ? 'opacity-50 border-gray-800' : activeSkin === 'master' ? 'border-yellow-500 bg-yellow-900/20' : 'border-gray-800'}`}>
+                                        <span>Grandmaster</span>
+                                        {!unlockedSkins.includes('master') && <span className="text-[10px] text-yellow-400 flex items-center gap-1"><Lock size={8}/> Lvl 20</span>}
+                                    </button>
                                 </div>
                                 <button onClick={() => setShowSkins(false)} className="w-full bg-gray-800 text-white py-2 rounded">CLOSE</button>
                             </div>
@@ -447,7 +478,7 @@
                                             <span className="text-xs">FREEZE TIME</span>
                                             <button onClick={() => setIsTimeFrozen(!isTimeFrozen)} className={`w-8 h-4 rounded-full ${isTimeFrozen ? 'bg-red-500' : 'bg-gray-600'}`}></button>
                                         </div>
-                                        <button onClick={() => setLevel(l => l+1)} className="w-full bg-gray-800 border border-gray-600 text-white text-xs py-2 rounded flex items-center justify-center gap-2"><SkipForward width={14}/> SKIP LEVEL</button>
+                                        <button onClick={nextLevel} className="w-full bg-gray-800 border border-gray-600 text-white text-xs py-2 rounded flex items-center justify-center gap-2"><SkipForward width={14}/> SKIP LEVEL</button>
                                         <div className="grid grid-cols-3 gap-2">
                                             <button onClick={() => spawnItem('speed')} className="border border-blue-500 text-blue-400 text-xs py-2 rounded">SPD</button>
                                             <button onClick={() => spawnItem('time')} className="border border-yellow-500 text-yellow-400 text-xs py-2 rounded">TIME</button>
@@ -467,4 +498,3 @@
         root.render(<Game />);
     </script>
 </body>
-</html>
