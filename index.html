@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>STONE LABYRINTH - Portable</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -47,6 +47,7 @@
             background-image: radial-gradient(circle at center, hsla(270, 50%, 10%, 0.5) 0%, transparent 100%);
             margin: 0;
             overflow: hidden;
+            touch-action: none;
         }
         .text-glow { text-shadow: 0 0 10px currentColor; }
         .text-glow-white { text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
@@ -109,6 +110,10 @@
         const X = (p) => <Icon name="X" {...p} />;
         const Ticket = (p) => <Icon name="Ticket" {...p} />;
         const Play = (p) => <Icon name="Play" {...p} />;
+        const ChevronUp = (p) => <Icon name="ChevronUp" {...p} />;
+        const ChevronDown = (p) => <Icon name="ChevronDown" {...p} />;
+        const ChevronLeft = (p) => <Icon name="ChevronLeft" {...p} />;
+        const ChevronRight = (p) => <Icon name="ChevronRight" {...p} />;
         // --- UI COMPONENTS ---
         const Button = ({ children, className, variant = "default", size = "default", ...props }) => {
             const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
@@ -379,7 +384,6 @@
                     else if (storyState === 'victory') setGameState("won");
                 }
             };
-            // --- VISION FIX: Correctly handle both Admin and Powerup Vision ---
             useEffect(() => {
                 if ((isVisionUnlimited || isVisionPowerupActive) && maze.length > 0) {
                     const path = solveMaze(maze, playerPos, {x: maze[0].length-1, y: maze.length-1});
@@ -438,45 +442,55 @@
                 const timer = setInterval(() => { setTimeLeft((t) => { if (t <= 1) { setGameState("lost"); return 0; } return t - 1; }); }, 1000);
                 return () => clearInterval(timer);
             }, [gameState, isTimeFrozen, isTimeFrozenPowerup, storyState, gameStarted]);
-            useEffect(() => {
-                if (!gameStarted) return;
+            // Core movement logic refactored for reuse
+            const movePlayer = useCallback((direction) => {
                 if (gameState !== "playing" || showCutscene) return;
-                const handleKeyDown = (e) => {
-                    if (document.activeElement?.tagName === "INPUT") return;
-                    const { x, y } = playerPos;
-                    const currentCell = maze[y][x];
-                    let nextX = x, nextY = y;
-                    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
-                    const canMove = (dir) => isGhostActive || !currentCell[dir];
-                    if ((e.key === "ArrowUp" || e.key === "w") && canMove('top')) nextY--;
-                    if ((e.key === "ArrowRight" || e.key === "d") && canMove('right')) nextX++;
-                    if ((e.key === "ArrowDown" || e.key === "s") && canMove('bottom')) nextY++;
-                    if ((e.key === "ArrowLeft" || e.key === "a") && canMove('left')) nextX--;
-                    if (nextY < 0 || nextY >= maze.length || nextX < 0 || nextX >= maze[0].length) return;
-                    if (nextX !== x || nextY !== y) {
-                        setPlayerPos({ x: nextX, y: nextY });
-                        const nextCell = maze[nextY][nextX];
-                        if (nextCell.item) {
-                            if (nextCell.item === 'time') { setTimeLeft(t => t + 5); toast({ title: "Time Extended!", description: "+5 Seconds added", className: "bg-yellow-900 border-yellow-500 text-yellow-100" }); }
-                            else if (nextCell.item === 'speed') { setIsSpeedActive(true); setTimeout(() => setIsSpeedActive(false), 5000); toast({ title: "Speed Boost!", description: "Super fast movement!", className: "bg-blue-900 border-blue-500 text-blue-100" }); }
-                            else if (nextCell.item === 'vision') { setIsVisionPowerupActive(true); setTimeout(() => setIsVisionPowerupActive(false), 3000); toast({ title: "Path Revealed!", description: "Showing optimal path", className: "bg-green-900 border-green-500 text-green-100" }); }
-                            else if (nextCell.item === 'ghost') { setIsGhostActive(true); setTimeout(() => setIsGhostActive(false), 5000); toast({ title: "Ghost Mode!", description: "Walk through walls!", className: "bg-purple-900 border-purple-500 text-purple-100" }); }
-                            else if (nextCell.item === 'freeze') { setIsTimeFrozenPowerup(true); setTimeout(() => setIsTimeFrozenPowerup(false), 10000); toast({ title: "Time Freeze!", description: "Timer stopped for 10s!", className: "bg-cyan-900 border-cyan-500 text-cyan-100" }); }
-                            const newMaze = [...maze];
-                            newMaze[nextY][nextX] = { ...nextCell, item: undefined };
-                            setMaze(newMaze);
-                        }
-                        if (nextX === maze[0].length - 1 && nextY === maze.length - 1) {
-                            if (level === 25) setStoryState('victory');
-                            else { 
-                                setGameState("won");
-                            }
+                
+                const { x, y } = playerPos;
+                const currentCell = maze[y][x];
+                let nextX = x, nextY = y;
+                const canMove = (dir) => isGhostActive || !currentCell[dir];
+                if (direction === 'up' && canMove('top')) nextY--;
+                if (direction === 'right' && canMove('right')) nextX++;
+                if (direction === 'down' && canMove('bottom')) nextY++;
+                if (direction === 'left' && canMove('left')) nextX--;
+                if (nextY < 0 || nextY >= maze.length || nextX < 0 || nextX >= maze[0].length) return;
+                
+                if (nextX !== x || nextY !== y) {
+                    setPlayerPos({ x: nextX, y: nextY });
+                    const nextCell = maze[nextY][nextX];
+                    if (nextCell.item) {
+                        if (nextCell.item === 'time') { setTimeLeft(t => t + 5); toast({ title: "Time Extended!", description: "+5 Seconds added", className: "bg-yellow-900 border-yellow-500 text-yellow-100" }); }
+                        else if (nextCell.item === 'speed') { setIsSpeedActive(true); setTimeout(() => setIsSpeedActive(false), 5000); toast({ title: "Speed Boost!", description: "Super fast movement!", className: "bg-blue-900 border-blue-500 text-blue-100" }); }
+                        else if (nextCell.item === 'vision') { setIsVisionPowerupActive(true); setTimeout(() => setIsVisionPowerupActive(false), 3000); toast({ title: "Path Revealed!", description: "Showing optimal path", className: "bg-green-900 border-green-500 text-green-100" }); }
+                        else if (nextCell.item === 'ghost') { setIsGhostActive(true); setTimeout(() => setIsGhostActive(false), 5000); toast({ title: "Ghost Mode!", description: "Walk through walls!", className: "bg-purple-900 border-purple-500 text-purple-100" }); }
+                        else if (nextCell.item === 'freeze') { setIsTimeFrozenPowerup(true); setTimeout(() => setIsTimeFrozenPowerup(false), 10000); toast({ title: "Time Freeze!", description: "Timer stopped for 10s!", className: "bg-cyan-900 border-cyan-500 text-cyan-100" }); }
+                        const newMaze = [...maze];
+                        newMaze[nextY][nextX] = { ...nextCell, item: undefined };
+                        setMaze(newMaze);
+                    }
+                    if (nextX === maze[0].length - 1 && nextY === maze.length - 1) {
+                        if (level === 25) setStoryState('victory');
+                        else { 
+                            setGameState("won");
                         }
                     }
+                }
+            }, [maze, gameState, showCutscene, playerPos, isGhostActive, level]);
+            useEffect(() => {
+                if (!gameStarted) return;
+                const handleKeyDown = (e) => {
+                    if (document.activeElement?.tagName === "INPUT") return;
+                    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+                    
+                    if (e.key === "ArrowUp" || e.key === "w") movePlayer('up');
+                    if (e.key === "ArrowRight" || e.key === "d") movePlayer('right');
+                    if (e.key === "ArrowDown" || e.key === "s") movePlayer('down');
+                    if (e.key === "ArrowLeft" || e.key === "a") movePlayer('left');
                 };
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
-            }, [playerPos, maze, gameState, isSpeedActive, gameStarted]);
+            }, [movePlayer, gameStarted]);
             const openPack = () => { if (packsAvailable <= 0 || isOpeningPack) return; setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
             const revealPack = () => {
                 if (openingStage !== 'ready') return;
@@ -594,21 +608,21 @@
                             transform: 'perspective(500px) rotateX(60deg) translateY(100px) scale(2)'
                         }}></div>
                         
-                        <div className="z-10 text-center space-y-12">
+                        <div className="z-10 text-center space-y-12 px-4">
                             <div className="space-y-4">
-                                <h1 className="text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse">STONE</h1>
-                                <h1 className="text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-neon-cyan to-blue-600 drop-shadow-[0_0_25px_rgba(0,255,255,0.8)]">LABYRINTH</h1>
+                                <h1 className="text-3xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse">STONE</h1>
+                                <h1 className="text-3xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-neon-cyan to-blue-600 drop-shadow-[0_0_25px_rgba(0,255,255,0.8)]">LABYRINTH</h1>
                             </div>
                             
                             <div className="flex flex-col items-center gap-6">
                                 <Button onClick={() => setGameStarted(true)} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
                                     <Play className="mr-4 w-6 h-6" fill="currentColor" /> START GAME
                                 </Button>
-                                <p className="text-gray-500 text-xs font-mono animate-pulse">INSERT COIN TO PLAY</p>
+                                <p className="text-gray-500 text-xs font-mono animate-pulse">TAP TO START</p>
                             </div>
                             
                             <div className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-gray-600 font-mono">
-                                V.2.0.4 - PORTABLE EDITION
+                                V.2.1.0 - MOBILE EDITION
                             </div>
                         </div>
                     </div>
@@ -616,12 +630,23 @@
             }
             if (!maze.length) return null;
             return (
-                <div className="min-h-screen bg-background flex items-center justify-center font-mono relative overflow-hidden">
+                <div className="min-h-screen bg-background flex flex-col md:flex-row items-center justify-center font-mono relative overflow-hidden">
                     
-                    {/* --- LAYOUT MATCHING SCREENSHOT --- */}
+                    {/* --- RESPONSIVE LAYOUT --- */}
                     
-                    {/* LEVEL INDICATOR (Left) - FIXED POSITION */}
-                    <div className="absolute left-8 top-1/2 -translate-y-1/2 flex flex-col items-start z-30 pointer-events-none">
+                    {/* MOBILE TOP BAR */}
+                    <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-black/80 backdrop-blur-md border-b border-gray-800 z-40 flex items-center justify-between px-4">
+                         <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-yellow-900/40 border border-yellow-600/50 rounded flex items-center justify-center"><Ticket size={12} className="text-yellow-500" /></div>
+                            <span className="text-white font-press text-lg">{String(level).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-neon-pink animate-pulse" />
+                            <span className="text-white font-press text-lg">{Math.floor(timeLeft)}s</span>
+                        </div>
+                    </div>
+                    {/* DESKTOP LEVEL INDICATOR (Left) - FIXED POSITION */}
+                    <div className="hidden md:flex absolute left-8 top-1/2 -translate-y-1/2 flex-col items-start z-30 pointer-events-none">
                         <h2 className="text-neon-purple text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">LEVEL</h2>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center justify-center w-8 h-8 bg-yellow-900/40 border border-yellow-600/50 rounded">
@@ -633,31 +658,42 @@
                             <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
                         </div>
                     </div>
-                    {/* TIME INDICATOR (Right) - FIXED POSITION */}
-                    <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-end z-30 pointer-events-none">
+                    {/* DESKTOP TIME INDICATOR (Right) - FIXED POSITION */}
+                    <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 flex-col items-end z-30 pointer-events-none">
                         <h2 className="text-neon-pink text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">TIME</h2>
                         <div className="text-4xl font-press text-white text-glow-white">
                             {Math.floor(timeLeft)}s
                         </div>
                     </div>
-                    {/* MAZE (Center) - FIXED MAX SIZE TO PREVENT OVERLAP */}
-                    <div className="relative z-20 max-w-[60vw] max-h-[70vh] flex items-center justify-center">
-                        <MazeRenderer maze={maze} cellSize={CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
+                    {/* MAZE (Center) - ADAPTIVE SIZE */}
+                    <div className="relative z-20 max-w-[90vw] max-h-[60vh] md:max-w-[60vw] md:max-h-[70vh] flex items-center justify-center mt-16 md:mt-0 mb-32 md:mb-0">
+                        <MazeRenderer maze={maze} cellSize={window.innerWidth < 768 ? 18 : CELL_SIZE} playerPos={playerPos} solutionPath={solutionPath} isSpeedActive={isSpeedActive} skin={activeSkin} />
                     </div>
-                    {/* BOTTOM CONTROLS - FIXED VISIBILITY */}
-                    <div className="fixed bottom-8 left-8 z-30 flex gap-4">
-                        <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white ${packsAvailable > 0 ? 'animate-pulse border-neon-purple text-white' : ''}`}>
-                            <Package className="w-4 h-4 mr-2" /> PACKS ({packsAvailable})
+                    {/* MOBILE D-PAD CONTROLS */}
+                    <div className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-40 grid grid-cols-3 gap-2 p-4 bg-black/20 rounded-full backdrop-blur-sm border border-white/10">
+                        <div />
+                        <button onTouchStart={(e) => { e.preventDefault(); movePlayer('up'); }} className="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border-2 border-gray-600 active:bg-neon-cyan active:border-white transition-colors"><ChevronUp className="text-white" /></button>
+                        <div />
+                        <button onTouchStart={(e) => { e.preventDefault(); movePlayer('left'); }} className="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border-2 border-gray-600 active:bg-neon-cyan active:border-white transition-colors"><ChevronLeft className="text-white" /></button>
+                        <div className="w-14 h-14 bg-black/50 rounded-full flex items-center justify-center"><div className="w-4 h-4 bg-gray-600 rounded-full" /></div>
+                        <button onTouchStart={(e) => { e.preventDefault(); movePlayer('right'); }} className="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border-2 border-gray-600 active:bg-neon-cyan active:border-white transition-colors"><ChevronRight className="text-white" /></button>
+                        <div />
+                        <button onTouchStart={(e) => { e.preventDefault(); movePlayer('down'); }} className="w-14 h-14 bg-gray-800/80 rounded-full flex items-center justify-center border-2 border-gray-600 active:bg-neon-cyan active:border-white transition-colors"><ChevronDown className="text-white" /></button>
+                        <div />
+                    </div>
+                    {/* BOTTOM CONTROLS - RESPONSIVE BAR */}
+                    <div className="fixed bottom-0 left-0 right-0 h-16 bg-black/90 border-t border-gray-800 z-50 flex items-center justify-around px-2 md:justify-center md:gap-4 md:bg-transparent md:border-0 md:bottom-8 md:h-auto">
+                        <Button onClick={openPack} disabled={packsAvailable === 0 || isOpeningPack} className={`font-mono text-[10px] md:text-xs h-10 px-3 md:px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white flex-1 md:flex-none mx-1 ${packsAvailable > 0 ? 'animate-pulse border-neon-purple text-white' : ''}`}>
+                            <Package className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> <span className="hidden md:inline">PACKS</span> ({packsAvailable})
                         </Button>
                         
-                        {/* DIRECT BUTTONS - NOT WRAPPED IN DIALOG TRIGGER */}
-                        <Button onClick={() => setIsShopOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
-                            <ShoppingCart className="w-4 h-4 mr-2" /> SHOP
+                        <Button onClick={() => setIsShopOpen(true)} className="font-mono text-[10px] md:text-xs h-10 px-3 md:px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white flex-1 md:flex-none mx-1">
+                            <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> SHOP
                         </Button>
-                        <Button onClick={() => setIsSkinsOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
-                            <Palette className="w-4 h-4 mr-2" /> SKINS
+                        <Button onClick={() => setIsSkinsOpen(true)} className="font-mono text-[10px] md:text-xs h-10 px-3 md:px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white flex-1 md:flex-none mx-1">
+                            <Palette className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> <span className="hidden md:inline">SKINS</span>
                         </Button>
-                        <Button onClick={() => setIsAdminOpen(true)} className="font-mono text-xs h-10 px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white">
+                        <Button onClick={() => setIsAdminOpen(true)} className="font-mono text-[10px] md:text-xs h-10 px-3 md:px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white flex-1 md:flex-none mx-1">
                             ADMIN
                         </Button>
                         {/* MODALS - DECOUPLED FROM BUTTONS */}
