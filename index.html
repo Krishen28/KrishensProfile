@@ -62,7 +62,7 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useCallback } = React;
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
         const { motion, AnimatePresence } = window.Motion;
         // --- ICONS ---
         const Icon = ({ name, size = 24, className, ...props }) => {
@@ -114,6 +114,110 @@
         const ChevronDown = (p) => <Icon name="ChevronDown" {...p} />;
         const ChevronLeft = (p) => <Icon name="ChevronLeft" {...p} />;
         const ChevronRight = (p) => <Icon name="ChevronRight" {...p} />;
+        const Volume2 = (p) => <Icon name="Volume2" {...p} />;
+        const VolumeX = (p) => <Icon name="VolumeX" {...p} />;
+        // --- AUDIO SYSTEM ---
+        const useMusic = (enabled) => {
+            const audioCtxRef = useRef(null);
+            const intervalRef = useRef(null);
+            const isPlayingRef = useRef(false);
+            useEffect(() => {
+                if (enabled && !audioCtxRef.current) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        try {
+                            audioCtxRef.current = new AudioContext();
+                        } catch(e) {
+                            console.error("AudioContext not supported", e);
+                        }
+                    }
+                }
+                
+                const playNote = (freq, type, duration, time, vol = 0.1) => {
+                    if (!audioCtxRef.current) return;
+                    try {
+                        const osc = audioCtxRef.current.createOscillator();
+                        const gain = audioCtxRef.current.createGain();
+                        
+                        osc.type = type;
+                        osc.frequency.value = freq;
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtxRef.current.destination);
+                        
+                        gain.gain.setValueAtTime(0, time);
+                        gain.gain.linearRampToValueAtTime(vol, time + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+                        
+                        osc.start(time);
+                        osc.stop(time + duration);
+                    } catch(e) {
+                        console.error("Error playing note", e);
+                    }
+                };
+                const startSequencer = () => {
+                    if (!audioCtxRef.current || isPlayingRef.current) return;
+                    isPlayingRef.current = true;
+                    
+                    let step = 0;
+                    const tempo = 110;
+                    const lookahead = 25.0;
+                    const scheduleAheadTime = 0.1;
+                    // Ensure currentTime is available
+                    let nextNoteTime = audioCtxRef.current.currentTime;
+                    const bassLine = [65.41, 65.41, 77.78, 87.31]; // C2, C2, D#2, F2
+                    const arpLine = [261.63, 311.13, 392.00, 523.25]; // C4, D#4, G4, C5
+                    const scheduler = () => {
+                        // Safety check if audio context was closed
+                        if (!audioCtxRef.current) return;
+                        
+                        while (nextNoteTime < audioCtxRef.current.currentTime + scheduleAheadTime) {
+                            // Bass - 8th notes
+                            const bassFreq = bassLine[Math.floor(step / 4) % 4];
+                            playNote(bassFreq, 'sawtooth', 0.2, nextNoteTime, 0.15);
+                            
+                            // Arp - 16th notes
+                            if (step % 2 === 0) {
+                                const arpFreq = arpLine[Math.floor(step / 2) % 4];
+                                playNote(arpFreq, 'square', 0.1, nextNoteTime, 0.05);
+                            }
+                            
+                            // Kick-ish
+                            if (step % 4 === 0) {
+                                playNote(50, 'sine', 0.1, nextNoteTime, 0.3);
+                            }
+                            
+                            // Snare-ish noise (simulated with high tri)
+                            if (step % 4 === 2) {
+                                playNote(150, 'triangle', 0.05, nextNoteTime, 0.1);
+                            }
+                            const secondsPerBeat = 60.0 / tempo;
+                            nextNoteTime += 0.25 * secondsPerBeat; // 16th notes
+                            step++;
+                        }
+                        intervalRef.current = setTimeout(scheduler, lookahead);
+                    };
+                    
+                    if (audioCtxRef.current.state === 'suspended') {
+                        audioCtxRef.current.resume().catch(e => console.error("Resume failed", e));
+                    }
+                    scheduler();
+                };
+                const stopSequencer = () => {
+                    if (intervalRef.current) clearTimeout(intervalRef.current);
+                    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+                         audioCtxRef.current.suspend().catch(e => console.error("Suspend failed", e));
+                    }
+                    isPlayingRef.current = false;
+                };
+                if (enabled) {
+                    startSequencer();
+                } else {
+                    stopSequencer();
+                }
+                return () => stopSequencer();
+            }, [enabled]);
+        };
         // --- UI COMPONENTS ---
         const Button = ({ children, className, variant = "default", size = "default", ...props }) => {
             const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
@@ -371,6 +475,9 @@
             const [showCutscene, setShowCutscene] = useState(false);
             const [storyState, setStoryState] = useState('intro');
             const [storyStep, setStoryStep] = useState(0);
+            const [musicEnabled, setMusicEnabled] = useState(false);
+            // Start music when game starts
+            useMusic(musicEnabled && gameStarted);
             const introDialog = [ "Welcome, little dot...", "I am the ARCHITECT of the STONE LABYRINTH.", "You seem lost. Good.", "Escape is impossible, but you are welcome to try.", "Survive my trials, and perhaps I will let you leave...", "BEGIN!" ];
             const level25Dialog = [ "IMPRESSIVE...", "You actually survived this long?", "But your luck ends HERE.", "I'm done playing fair.", "Let's see how you handle... TRUE CHAOS!", "DIE!" ];
             const victoryDialog = [ "NO...", "IMPOSSIBLE!", "My masterpiece... RUINED!", "You have bested me, anomaly.", "The labyrinth is yours.", "Begone." ];
@@ -509,24 +616,40 @@
                 }, 2500);
             };
             const closePack = () => { setIsOpeningPack(false); setPackResult(null); setOpeningStage('ready'); };
-            const nextLevel = () => {
-                setCoins(c => c + 10); toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
+            
+            // MODIFIED: nextLevel accepts an isSkipped parameter to suppress notifications
+            const nextLevel = (isSkipped = false) => {
+                // Only show coin toast if NOT skipped by admin
+                if (!isSkipped) {
+                    setCoins(c => c + 10); 
+                    toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
+                } else {
+                    // Still give coins? The prompt says "10 coins notification dosent stay"
+                    // Usually skips don't award coins, but let's keep coins for mechanics, just hide toast
+                    setCoins(c => c + 10);
+                }
+                
                 const nextLvl = level + 1;
-                if (nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
-                if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
-                if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
-                if (nextLvl === 20 && !unlockedSkins.includes('master')) { setUnlockedSkins(p => [...p, 'master']); toast({ title: "NEW SKIN!", description: "Grandmaster Crown acquired!", className: "bg-yellow-900 border-yellow-500 text-white font-bold" }); }
+                // Only show pack toast if NOT skipped, or maybe always show meaningful rewards? 
+                // Let's suppress pack toast too for admin skips to keep it clean
+                if (!isSkipped && nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
+                else if (isSkipped && nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); } // Still award pack
+                if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
+                if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
+                if (nextLvl === 20 && !unlockedSkins.includes('master')) { setUnlockedSkins(p => [...p, 'master']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Grandmaster Crown acquired!", className: "bg-yellow-900 border-yellow-500 text-white font-bold" }); }
                 setLevel(l => l + 1);
             };
             const buyPowerUp = (type, cost) => {
                 if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
                 setCoins(c => c - cost); spawnPowerUpNearPlayer(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
             };
+            
             const buySkipLevel = () => {
                 const cost = 150;
                 if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
-                setCoins(c => c - cost); setIsShopOpen(false); nextLevel(); toast({ title: "LEVEL SKIPPED", description: "Moving to next sector...", className: "bg-neon-cyan border-white text-black font-bold" });
+                setCoins(c => c - cost); setIsShopOpen(false); nextLevel(false); toast({ title: "LEVEL SKIPPED", description: "Moving to next sector...", className: "bg-neon-cyan border-white text-black font-bold" });
             };
+            
             const restart = () => { setLevel(1); setCoins(0); initLevel(1); };
             const retry = () => { initLevel(level); };
             
@@ -615,14 +738,14 @@
                             </div>
                             
                             <div className="flex flex-col items-center gap-6">
-                                <Button onClick={() => setGameStarted(true)} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
+                                <Button onClick={() => { setGameStarted(true); setMusicEnabled(true); }} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
                                     <Play className="mr-4 w-6 h-6" fill="currentColor" /> START GAME
                                 </Button>
                                 <p className="text-gray-500 text-xs font-mono animate-pulse">TAP TO START</p>
                             </div>
                             
                             <div className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-gray-600 font-mono">
-                                V.2.1.0 - MOBILE EDITION
+                                V.2.2.0 - AUDIO EDITION
                             </div>
                         </div>
                     </div>
@@ -641,6 +764,9 @@
                             <span className="text-white font-press text-lg">{String(level).padStart(2, '0')}</span>
                         </div>
                         <div className="flex items-center gap-2">
+                            <button onClick={() => setMusicEnabled(!musicEnabled)} className="mr-2 text-gray-400 hover:text-white">
+                                {musicEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                            </button>
                             <Clock size={16} className="text-neon-pink animate-pulse" />
                             <span className="text-white font-press text-lg">{Math.floor(timeLeft)}s</span>
                         </div>
@@ -661,8 +787,15 @@
                     {/* DESKTOP TIME INDICATOR (Right) - FIXED POSITION */}
                     <div className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 flex-col items-end z-30 pointer-events-none">
                         <h2 className="text-neon-pink text-xs tracking-[0.2em] uppercase font-mono mb-2 opacity-80">TIME</h2>
-                        <div className="text-4xl font-press text-white text-glow-white">
-                            {Math.floor(timeLeft)}s
+                        <div className="flex items-center gap-4 mb-2">
+                             <div className="text-4xl font-press text-white text-glow-white">
+                                {Math.floor(timeLeft)}s
+                            </div>
+                        </div>
+                        <div className="pointer-events-auto">
+                            <button onClick={() => setMusicEnabled(!musicEnabled)} className="text-gray-500 hover:text-white flex items-center gap-2 text-xs font-mono bg-black/50 px-2 py-1 rounded border border-gray-800">
+                                {musicEnabled ? <><Volume2 size={14} /> MUSIC: ON</> : <><VolumeX size={14} /> MUSIC: OFF</>}
+                            </button>
                         </div>
                     </div>
                     {/* MAZE (Center) - ADAPTIVE SIZE */}
@@ -746,7 +879,7 @@
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center"><span className="text-sm">Freeze Time</span><Switch checked={isTimeFrozen} onCheckedChange={setIsTimeFrozen} /></div>
                                     <div className="flex justify-between items-center"><span className="text-sm">Vision</span><Switch checked={isVisionUnlimited} onCheckedChange={setIsVisionUnlimited} /></div>
-                                    <Button variant="secondary" size="sm" onClick={nextLevel} className="w-full">SKIP LEVEL</Button>
+                                    <Button variant="secondary" size="sm" onClick={() => nextLevel(true)} className="w-full">SKIP LEVEL</Button>
                                     <div className="grid grid-cols-3 gap-2">
                                         <Button variant="outline" size="sm" onClick={() => spawnPowerUp('speed')} className="text-blue-400">Speed</Button>
                                         <Button variant="outline" size="sm" onClick={() => spawnPowerUp('time')} className="text-yellow-400">Time</Button>
@@ -775,7 +908,7 @@
                                     <>
                                         <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                                         <h2 className="text-2xl font-press text-green-400 mb-2">ESCAPED!</h2>
-                                        <Button onClick={nextLevel} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
+                                        <Button onClick={() => nextLevel(false)} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
                                     </>
                                 ) : (
                                     <>
