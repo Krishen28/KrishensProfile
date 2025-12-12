@@ -494,6 +494,8 @@
             const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
             const [isTimeFrozen, setIsTimeFrozen] = useState(false);
             const [isVisionUnlimited, setIsVisionUnlimited] = useState(false);
+            const [isInfinitePacks, setIsInfinitePacks] = useState(false);
+            const [isInfiniteMoney, setIsInfiniteMoney] = useState(false);
             const [showCutscene, setShowCutscene] = useState(false);
             const [storyState, setStoryState] = useState('intro');
             const [storyStep, setStoryStep] = useState(0);
@@ -650,7 +652,7 @@
                 window.addEventListener("keydown", handleKeyDown);
                 return () => window.removeEventListener("keydown", handleKeyDown);
             }, [movePlayer, gameStarted]);
-            const openPack = () => { if (packsAvailable <= 0 || isOpeningPack) return; setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
+            const openPack = () => { if ((packsAvailable <= 0 && !isInfinitePacks) || isOpeningPack) return; if (!isInfinitePacks) setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
             
             // BRAWL STARS STYLE PACK OPENING
             const handlePackClick = () => {
@@ -695,14 +697,14 @@
                 setLevel(l => l + 1);
             };
             const buyPowerUp = (type, cost) => {
-                if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
-                setCoins(c => c - cost); spawnPowerUpNearPlayer(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
+                if (coins < cost && !isInfiniteMoney) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
+                if (!isInfiniteMoney) setCoins(c => c - cost); spawnPowerUpNearPlayer(type); toast({ title: "PURCHASE SUCCESSFUL", description: `${type.toUpperCase()} deployed!`, className: "bg-green-900 border-green-500 text-white" });
             };
             
             const buySkipLevel = () => {
                 const cost = 150;
-                if (coins < cost) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
-                setCoins(c => c - cost); setIsShopOpen(false); nextLevel(false); toast({ title: "LEVEL SKIPPED", description: "Moving to next sector...", className: "bg-neon-cyan border-white text-black font-bold" });
+                if (coins < cost && !isInfiniteMoney) { toast({ title: "INSUFFICIENT FUNDS", description: `Need ${cost} coins.`, variant: "destructive" }); return; }
+                if (!isInfiniteMoney) setCoins(c => c - cost); setIsShopOpen(false); nextLevel(false); toast({ title: "LEVEL SKIPPED", description: "Moving to next sector...", className: "bg-neon-cyan border-white text-black font-bold" });
             };
             
             const restart = () => { setLevel(1); setCoins(0); initLevel(1); };
@@ -963,6 +965,8 @@
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center"><span className="text-sm">Freeze Time</span><Switch checked={isTimeFrozen} onCheckedChange={setIsTimeFrozen} /></div>
                                     <div className="flex justify-between items-center"><span className="text-sm">Vision</span><Switch checked={isVisionUnlimited} onCheckedChange={setIsVisionUnlimited} /></div>
+                                    <div className="flex justify-between items-center"><span className="text-sm text-yellow-400">Infinite Money</span><Switch checked={isInfiniteMoney} onCheckedChange={setIsInfiniteMoney} /></div>
+                                    <div className="flex justify-between items-center"><span className="text-sm text-neon-purple">Infinite Packs</span><Switch checked={isInfinitePacks} onCheckedChange={setIsInfinitePacks} /></div>
                                     <Button variant="secondary" size="sm" onClick={() => nextLevel(true)} className="w-full">SKIP LEVEL</Button>
                                     <div className="grid grid-cols-3 gap-2">
                                         <Button variant="outline" size="sm" onClick={() => spawnPowerUp('speed')} className="text-blue-400">Speed</Button>
