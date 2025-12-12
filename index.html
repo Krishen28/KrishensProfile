@@ -27,6 +27,7 @@
                     },
                     animation: {
                         'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite',
+                        'bounce-slow': 'bounce 3s infinite',
                     },
                     keyframes: {
                         shake: {
@@ -57,6 +58,13 @@
         ::-webkit-scrollbar-track { background: #111; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Rarity Gradients */
+        .rarity-bg-common { background: radial-gradient(circle, #9ca3af 0%, #374151 100%); }
+        .rarity-bg-uncommon { background: radial-gradient(circle, #60a5fa 0%, #1e3a8a 100%); }
+        .rarity-bg-rare { background: radial-gradient(circle, #c084fc 0%, #581c87 100%); }
+        .rarity-bg-epic { background: radial-gradient(circle, #facc15 0%, #713f12 100%); }
+        .rarity-bg-legendary { background: radial-gradient(circle, #fb923c 0%, #7c2d12 100%); }
+        .rarity-bg-mythic { background: radial-gradient(circle, #f87171 0%, #7f1d1d 100%); }
     </style>
 </head>
 <body>
@@ -116,6 +124,8 @@
         const ChevronRight = (p) => <Icon name="ChevronRight" {...p} />;
         const Volume2 = (p) => <Icon name="Volume2" {...p} />;
         const VolumeX = (p) => <Icon name="VolumeX" {...p} />;
+        const User = (p) => <Icon name="User" {...p} />;
+        const BarChart2 = (p) => <Icon name="BarChart2" {...p} />;
         // --- AUDIO SYSTEM ---
         const useMusic = (enabled) => {
             const audioCtxRef = useRef(null);
@@ -365,6 +375,15 @@
             'ghost': 'Mythic', 'flame': 'Mythic',
             'slayer': 'Special', 'ninja': 'Special', 'master': 'Special'
         };
+        const RARITY_COLORS = {
+            'Common': '#9ca3af',
+            'Uncommon': '#60a5fa',
+            'Rare': '#c084fc',
+            'Epic': '#facc15',
+            'Legendary': '#fb923c',
+            'Mythic': '#f87171',
+            'Special': '#f472b6'
+        };
         function MazeRenderer({ maze, cellSize, playerPos, solutionPath, isSpeedActive, skin = 'orb' }) {
             const width = maze[0].length * cellSize;
             const height = maze.length * cellSize;
@@ -447,6 +466,8 @@
         const ADMIN_CODE = "sussybaka120956";
         function Game() {
             const { toast } = useToast();
+            const [username, setUsername] = useState(() => localStorage.getItem('sl_username') || '');
+            const [isUsernameSet, setIsUsernameSet] = useState(!!username);
             const [gameStarted, setGameStarted] = useState(false);
             const [level, setLevel] = useState(1);
             const [maze, setMaze] = useState([]);
@@ -462,12 +483,13 @@
             const [unlockedSkins, setUnlockedSkins] = useState(['orb']); 
             const [packsAvailable, setPacksAvailable] = useState(0);
             const [isOpeningPack, setIsOpeningPack] = useState(false);
-            const [openingStage, setOpeningStage] = useState('ready');
+            const [openingStage, setOpeningStage] = useState('ready'); // ready, shaking, flash, reveal
             const [packResult, setPackResult] = useState(null);
             const [coins, setCoins] = useState(0);
             const [isShopOpen, setIsShopOpen] = useState(false);
             const [isAdminOpen, setIsAdminOpen] = useState(false);
             const [isSkinsOpen, setIsSkinsOpen] = useState(false);
+            const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
             const [adminPassword, setAdminPassword] = useState("");
             const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
             const [isTimeFrozen, setIsTimeFrozen] = useState(false);
@@ -476,8 +498,38 @@
             const [storyState, setStoryState] = useState('intro');
             const [storyStep, setStoryStep] = useState(0);
             const [musicEnabled, setMusicEnabled] = useState(false);
+            // Mock Leaderboard Data
+            const [leaderboardData, setLeaderboardData] = useState([]);
             // Start music when game starts
             useMusic(musicEnabled && gameStarted);
+            useEffect(() => {
+                if (username) {
+                    localStorage.setItem('sl_username', username);
+                }
+            }, [username]);
+            // Generate Mock Leaderboard
+            useEffect(() => {
+                const names = ["ShadowRunner", "MazeKing", "LabyrinthLord", "StoneSeeker", "VoidWalker", "NeonDrifter", "PixelPioneer", "CyberSamurai"];
+                const mockData = names.map(name => ({
+                    name,
+                    level: Math.floor(Math.random() * 20) + 5
+                })).sort((a, b) => b.level - a.level);
+                
+                // Add user if they have played
+                const userHighScore = parseInt(localStorage.getItem('sl_highscore') || '0');
+                if (userHighScore > 0 && username) {
+                    mockData.push({ name: username, level: userHighScore, isUser: true });
+                }
+                
+                setLeaderboardData(mockData.sort((a, b) => b.level - a.level).slice(0, 10));
+            }, [username, level]); // Update when level changes to keep user score fresh
+            // Update High Score
+            useEffect(() => {
+                const currentHigh = parseInt(localStorage.getItem('sl_highscore') || '0');
+                if (level > currentHigh) {
+                    localStorage.setItem('sl_highscore', level.toString());
+                }
+            }, [level]);
             const introDialog = [ "Welcome, little dot...", "I am the ARCHITECT of the STONE LABYRINTH.", "You seem lost. Good.", "Escape is impossible, but you are welcome to try.", "Survive my trials, and perhaps I will let you leave...", "BEGIN!" ];
             const level25Dialog = [ "IMPRESSIVE...", "You actually survived this long?", "But your luck ends HERE.", "I'm done playing fair.", "Let's see how you handle... TRUE CHAOS!", "DIE!" ];
             const victoryDialog = [ "NO...", "IMPOSSIBLE!", "My masterpiece... RUINED!", "You have bested me, anomaly.", "The labyrinth is yours.", "Begone." ];
@@ -599,41 +651,44 @@
                 return () => window.removeEventListener("keydown", handleKeyDown);
             }, [movePlayer, gameStarted]);
             const openPack = () => { if (packsAvailable <= 0 || isOpeningPack) return; setPacksAvailable(p => p - 1); setIsOpeningPack(true); setOpeningStage('ready'); setPackResult(null); };
-            const revealPack = () => {
-                if (openingStage !== 'ready') return;
-                setOpeningStage('shaking');
-                const rand = Math.random() * 100;
-                let rarity = 'Common';
-                if (rand < 0.5) rarity = 'Mythic'; else if (rand < 5.5) rarity = 'Legendary'; else if (rand < 15.5) rarity = 'Epic'; else if (rand < 30) rarity = 'Rare'; else if (rand < 50) rarity = 'Uncommon';
-                const skinsByRarity = { 'Common': ['orb', 'cube', 'triangle'], 'Uncommon': ['diamond', 'heart'], 'Rare': ['star', 'moon'], 'Epic': ['lightning', 'sun'], 'Legendary': ['crown', 'skull'], 'Mythic': ['ghost', 'flame'] };
-                const pool = skinsByRarity[rarity];
-                const wonSkin = pool[Math.floor(Math.random() * pool.length)];
-                setTimeout(() => {
+            
+            // BRAWL STARS STYLE PACK OPENING
+            const handlePackClick = () => {
+                if (openingStage === 'ready') {
+                    setOpeningStage('shaking');
+                    // Determine rarity and result immediately but don't show yet
+                    const rand = Math.random() * 100;
+                    let rarity = 'Common';
+                    if (rand < 0.5) rarity = 'Mythic'; else if (rand < 5.5) rarity = 'Legendary'; else if (rand < 15.5) rarity = 'Epic'; else if (rand < 30) rarity = 'Rare'; else if (rand < 50) rarity = 'Uncommon';
+                    
+                    const skinsByRarity = { 'Common': ['orb', 'cube', 'triangle'], 'Uncommon': ['diamond', 'heart'], 'Rare': ['star', 'moon'], 'Epic': ['lightning', 'sun'], 'Legendary': ['crown', 'skull'], 'Mythic': ['ghost', 'flame'] };
+                    const pool = skinsByRarity[rarity];
+                    const wonSkin = pool[Math.floor(Math.random() * pool.length)];
                     setPackResult(wonSkin);
-                    setOpeningStage('revealed');
-                    if (!unlockedSkins.includes(wonSkin)) { setUnlockedSkins(prev => [...prev, wonSkin]); toast({ title: `UNLOCKED: ${wonSkin.toUpperCase()}`, description: `You found a ${rarity} skin!`, className: "bg-neon-purple border-neon-pink text-white font-bold" }); }
-                    else { toast({ title: "DUPLICATE", description: `You already have the ${wonSkin} skin.`, className: "bg-gray-800 border-gray-600 text-gray-400" }); }
-                }, 2500);
+                    // Sequence: Shaking -> Flash -> Reveal
+                    setTimeout(() => setOpeningStage('flash'), 1000);
+                    setTimeout(() => setOpeningStage('reveal'), 1500);
+                    // Unlock logic runs in background
+                    if (!unlockedSkins.includes(wonSkin)) { setUnlockedSkins(prev => [...prev, wonSkin]); }
+                } else if (openingStage === 'reveal') {
+                    // Close on next click
+                    closePack();
+                }
             };
+            
             const closePack = () => { setIsOpeningPack(false); setPackResult(null); setOpeningStage('ready'); };
             
-            // MODIFIED: nextLevel accepts an isSkipped parameter to suppress notifications
             const nextLevel = (isSkipped = false) => {
-                // Only show coin toast if NOT skipped by admin
                 if (!isSkipped) {
                     setCoins(c => c + 10); 
                     toast({ title: "LEVEL COMPLETE", description: "+10 COINS", className: "bg-yellow-900 border-yellow-500 text-white font-bold" });
                 } else {
-                    // Still give coins? The prompt says "10 coins notification dosent stay"
-                    // Usually skips don't award coins, but let's keep coins for mechanics, just hide toast
                     setCoins(c => c + 10);
                 }
                 
                 const nextLvl = level + 1;
-                // Only show pack toast if NOT skipped, or maybe always show meaningful rewards? 
-                // Let's suppress pack toast too for admin skips to keep it clean
                 if (!isSkipped && nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); toast({ title: "LOOT PACK EARNED!", description: "You've earned a skin pack!", className: "bg-neon-cyan border-white text-black font-bold animate-bounce" }); }
-                else if (isSkipped && nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); } // Still award pack
+                else if (isSkipped && nextLvl % 3 === 0) { setPacksAvailable(p => p + 1); }
                 if (nextLvl === 5 && !unlockedSkins.includes('slayer')) { setUnlockedSkins(p => [...p, 'slayer']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Boss Slayer acquired!", className: "bg-red-900 border-red-500 text-white font-bold" }); }
                 if (nextLvl === 10 && !unlockedSkins.includes('ninja')) { setUnlockedSkins(p => [...p, 'ninja']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Neon Ninja acquired!", className: "bg-purple-900 border-purple-500 text-white font-bold" }); }
                 if (nextLvl === 20 && !unlockedSkins.includes('master')) { setUnlockedSkins(p => [...p, 'master']); if (!isSkipped) toast({ title: "NEW SKIN!", description: "Grandmaster Crown acquired!", className: "bg-yellow-900 border-yellow-500 text-white font-bold" }); }
@@ -676,14 +731,12 @@
                 while (queue.length > 0) {
                     const current = queue.shift();
                     
-                    // Found an empty spot that isn't player position
                     if ((current.x !== x || current.y !== y) && !maze[current.y][current.x].item) {
                         target = current;
                         break;
                     }
                     
                     if (current.dist >= maxDist) continue;
-                    // Check accessible neighbors (respecting walls for true path distance)
                     const cell = maze[current.y][current.x];
                     const neighbors = [];
                     if (!cell.top && current.y > 0) neighbors.push({x: current.x, y: current.y - 1});
@@ -704,7 +757,6 @@
                     setMaze(newMaze);
                     toast({ title: "Item Spawned", description: `${type} appeared nearby!`, className: "bg-slate-800 border-slate-600 text-white" });
                 } else {
-                    // Fallback if boxed in (e.g., start of level)
                      spawnPowerUp(type);
                 }
             };
@@ -720,38 +772,65 @@
                 }
                 if (placed) { setMaze(newMaze); toast({ title: "Item Spawned", description: `Spawned ${type}`, className: "bg-slate-800 border-slate-600 text-white" }); }
             };
-            // START SCREEN
+            // START SCREEN & USERNAME
             if (!gameStarted) {
                 return (
                     <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden font-press text-white">
-                        {/* Background Grid */}
                         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ 
                             backgroundImage: 'linear-gradient(transparent 95%, #00ffff 95%), linear-gradient(90deg, transparent 95%, #ff00ff 95%)',
                             backgroundSize: '40px 40px',
                             transform: 'perspective(500px) rotateX(60deg) translateY(100px) scale(2)'
                         }}></div>
                         
-                        <div className="z-10 text-center space-y-12 px-4">
+                        <div className="z-10 text-center space-y-12 px-4 w-full max-w-md">
                             <div className="space-y-4">
                                 <h1 className="text-3xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] animate-pulse">STONE</h1>
                                 <h1 className="text-3xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-neon-cyan to-blue-600 drop-shadow-[0_0_25px_rgba(0,255,255,0.8)]">LABYRINTH</h1>
                             </div>
                             
-                            <div className="flex flex-col items-center gap-6">
-                                <Button onClick={() => { setGameStarted(true); setMusicEnabled(true); }} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
-                                    <Play className="mr-4 w-6 h-6" fill="currentColor" /> START GAME
-                                </Button>
-                                <p className="text-gray-500 text-xs font-mono animate-pulse">TAP TO START</p>
-                            </div>
+                            {!isUsernameSet ? (
+                                <div className="space-y-6 bg-black/50 p-8 rounded-xl border border-gray-800 backdrop-blur-md">
+                                    <h2 className="text-lg text-neon-pink">IDENTIFY YOURSELF</h2>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-3 text-gray-500" />
+                                        <input 
+                                            value={username} 
+                                            onChange={(e) => setUsername(e.target.value.toUpperCase())}
+                                            placeholder="ENTER CODENAME"
+                                            className="w-full bg-black border-2 border-neon-cyan text-white p-3 pl-10 font-mono text-center focus:outline-none focus:shadow-[0_0_15px_rgba(0,255,255,0.5)]"
+                                            maxLength={12}
+                                        />
+                                    </div>
+                                    <Button onClick={() => username.length > 0 && setIsUsernameSet(true)} className="w-full py-4 bg-neon-purple hover:bg-purple-700 text-white font-press">CONFIRM</Button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-6">
+                                    <h2 className="text-neon-cyan font-mono text-sm">OPERATIVE: {username}</h2>
+                                    <Button onClick={() => { setGameStarted(true); setMusicEnabled(true); }} className="px-12 py-6 text-xl bg-neon-pink hover:bg-pink-400 text-white border-4 border-white shadow-[0_0_20px_rgba(255,0,255,0.6)] transition-transform hover:scale-105 active:scale-95">
+                                        <Play className="mr-4 w-6 h-6" fill="currentColor" /> START GAME
+                                    </Button>
+                                    <Button variant="ghost" onClick={() => setIsUsernameSet(false)} className="text-xs text-gray-500 hover:text-white">CHANGE USER</Button>
+                                </div>
+                            )}
                             
                             <div className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-gray-600 font-mono">
-                                V.2.2.0 - AUDIO EDITION
+                                V.2.3.0 - LEADERBOARD EDITION
                             </div>
                         </div>
                     </div>
                 );
             }
             if (!maze.length) return null;
+            // Rarity color helper for pack opening
+            const getRarityColor = (rarity) => {
+                if (rarity === 'Common') return '#9ca3af';
+                if (rarity === 'Uncommon') return '#60a5fa';
+                if (rarity === 'Rare') return '#c084fc';
+                if (rarity === 'Epic') return '#facc15';
+                if (rarity === 'Legendary') return '#fb923c';
+                if (rarity === 'Mythic') return '#f87171';
+                return '#ffffff';
+            };
             return (
                 <div className="min-h-screen bg-background flex flex-col md:flex-row items-center justify-center font-mono relative overflow-hidden">
                     
@@ -782,6 +861,11 @@
                                 {String(level).padStart(2, '0')}
                             </div>
                             <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
+                        </div>
+                        <div className="mt-8 pointer-events-auto">
+                            <Button onClick={() => setIsLeaderboardOpen(true)} size="sm" variant="outline" className="border-gray-700 text-gray-400 hover:text-white text-xs">
+                                <BarChart2 size={14} className="mr-2" /> LEADERBOARD
+                            </Button>
                         </div>
                     </div>
                     {/* DESKTOP TIME INDICATOR (Right) - FIXED POSITION */}
@@ -829,7 +913,7 @@
                         <Button onClick={() => setIsAdminOpen(true)} className="font-mono text-[10px] md:text-xs h-10 px-3 md:px-6 border bg-[#2a2a35] text-gray-300 border-gray-600 hover:bg-[#3a3a45] hover:text-white flex-1 md:flex-none mx-1">
                             ADMIN
                         </Button>
-                        {/* MODALS - DECOUPLED FROM BUTTONS */}
+                        {/* MODALS */}
                         <Modal open={isShopOpen} onClose={() => setIsShopOpen(false)} className="border-yellow-500 text-white">
                             <ModalHeader>
                                 <ModalTitle className="text-yellow-500 font-press text-sm flex items-center gap-2"><ShoppingCart size={18} /> BLACK MARKET</ModalTitle>
@@ -868,7 +952,7 @@
                             </div>
                         </Modal>
                         
-                         <Modal open={isAdminOpen} onClose={() => setIsAdminOpen(false)} className="border-neon-purple text-white">
+                        <Modal open={isAdminOpen} onClose={() => setIsAdminOpen(false)} className="border-neon-purple text-white">
                             <ModalHeader><ModalTitle className="text-neon-purple font-press text-sm">SYSTEM OVERRIDE</ModalTitle></ModalHeader>
                             {!isAdminAuthenticated ? (
                                 <div className="space-y-4">
@@ -887,6 +971,20 @@
                                     </div>
                                 </div>
                             )}
+                        </Modal>
+                        <Modal open={isLeaderboardOpen} onClose={() => setIsLeaderboardOpen(false)} className="border-gray-500 text-white">
+                            <ModalHeader><ModalTitle className="text-white font-press text-sm flex items-center gap-2"><Trophy size={18} className="text-yellow-500" /> HALL OF FAME</ModalTitle></ModalHeader>
+                            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+                                {leaderboardData.map((entry, index) => (
+                                    <div key={index} className={`flex items-center justify-between p-3 rounded ${entry.isUser ? 'bg-neon-purple/20 border border-neon-purple' : 'bg-gray-900/50 border border-gray-800'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-mono font-bold w-6 ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-gray-500'}`}>#{index + 1}</span>
+                                            <span className={`font-mono text-sm ${entry.isUser ? 'text-white font-bold' : 'text-gray-300'}`}>{entry.name}</span>
+                                        </div>
+                                        <span className="font-press text-xs text-neon-cyan">LVL {entry.level}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </Modal>
                     </div>
                     {/* STORY CUTSCENE OVERLAY */}
@@ -908,41 +1006,47 @@
                                     <>
                                         <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                                         <h2 className="text-2xl font-press text-green-400 mb-2">ESCAPED!</h2>
+                                        <div className="text-sm text-gray-400 mb-4">LEVEL {level} COMPLETE</div>
                                         <Button onClick={() => nextLevel(false)} className="w-full bg-neon-cyan hover:bg-cyan-400 text-black font-bold font-press mt-4 py-6">NEXT LEVEL</Button>
+                                        <Button variant="ghost" onClick={() => setIsLeaderboardOpen(true)} className="w-full text-white mt-4"><BarChart2 size={16} className="mr-2" /> Leaderboard</Button>
                                     </>
                                 ) : (
                                     <>
                                         <Timer className="w-16 h-16 text-red-500 mx-auto mb-4" />
                                         <h2 className="text-2xl font-press text-red-500 mb-2">TIME OUT</h2>
+                                        <div className="text-sm text-gray-400 mb-4">You reached Level {level}</div>
                                         <Button onClick={retry} className="w-full bg-white hover:bg-gray-200 text-black font-bold font-press mt-4 py-6">TRY AGAIN</Button>
+                                        <Button variant="ghost" onClick={() => setIsLeaderboardOpen(true)} className="w-full text-white mt-4"><BarChart2 size={16} className="mr-2" /> Leaderboard</Button>
                                         <Button variant="ghost" onClick={() => setLevel(1)} className="w-full text-gray-500 mt-2">Reset</Button>
                                     </>
                                 )}
                             </Card>
                         </div>
                     )}
-                    {/* OPENING PACK ANIMATION */}
+                    {/* PACK OPENING ANIMATION */}
                     {isOpeningPack && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md">
-                            <div className="flex flex-col items-center text-center">
+                        <div className={`fixed inset-0 z-[100] flex items-center justify-center transition-colors duration-500 ${openingStage === 'flash' || openingStage === 'reveal' ? 'bg-white' : 'bg-black/95 backdrop-blur-md'}`} style={{ backgroundColor: openingStage === 'flash' || openingStage === 'reveal' ? getRarityColor(SKIN_RARITIES[packResult]) : undefined }}>
+                            <div className="flex flex-col items-center text-center w-full max-w-lg p-4">
                                 {openingStage === 'ready' && (
-                                    <div className="animate-in zoom-in duration-300 cursor-pointer group" onClick={revealPack}>
+                                    <div className="animate-in zoom-in duration-300 cursor-pointer group" onClick={handlePackClick}>
                                         <Package className="w-40 h-40 text-neon-purple group-hover:scale-110 transition-transform drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]" />
-                                        <h2 className="text-3xl font-press text-white mt-8 animate-bounce">CLICK TO OPEN</h2>
+                                        <h2 className="text-3xl font-press text-white mt-8 animate-bounce">TAP TO OPEN</h2>
                                     </div>
                                 )}
                                 {openingStage === 'shaking' && (
                                     <div className="animate-shake"><Package className="w-40 h-40 text-white" /></div>
                                 )}
-                                {openingStage === 'revealed' && packResult && (
-                                    <div className="animate-in zoom-in duration-500 flex flex-col items-center">
-                                        <div className="scale-150 mb-8"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={60} playerPos={{x:0,y:0}} skin={packResult} /></div>
-                                        <h2 className="text-4xl font-press text-white mb-2">{packResult.toUpperCase()}</h2>
-                                        <div className="font-mono text-xl mb-2 px-6 py-2 rounded border-2 border-neon-pink text-neon-pink">{SKIN_RARITIES[packResult]}</div>
-                                        <p className="text-gray-400 font-mono text-sm mb-8">
-                                            {SKIN_RARITIES[packResult] === 'Mythic' ? '0.5%' : SKIN_RARITIES[packResult] === 'Legendary' ? '5%' : SKIN_RARITIES[packResult] === 'Epic' ? '10%' : SKIN_RARITIES[packResult] === 'Rare' ? '14.5%' : SKIN_RARITIES[packResult] === 'Uncommon' ? '20%' : '50%'} Chance
-                                        </p>
-                                        <Button onClick={closePack} className="bg-white text-black font-press px-8 py-6 text-lg hover:bg-gray-200">CONTINUE</Button>
+                                {(openingStage === 'flash' || openingStage === 'reveal') && packResult && (
+                                    <div className="animate-in zoom-in duration-300 flex flex-col items-center w-full" onClick={handlePackClick}>
+                                        <h1 className="text-4xl md:text-6xl font-press text-white drop-shadow-md mb-8 animate-bounce uppercase tracking-widest">{SKIN_RARITIES[packResult]}!</h1>
+                                        
+                                        {openingStage === 'reveal' && (
+                                            <div className="animate-in zoom-in spin-in-12 duration-500 flex flex-col items-center bg-black/40 p-12 rounded-xl backdrop-blur-sm border-4 border-white">
+                                                <div className="scale-[2.5] mb-12"><MazeRenderer maze={[[{x:0,y:0,top:false,bottom:false,left:false,right:false}]]} cellSize={60} playerPos={{x:0,y:0}} skin={packResult} /></div>
+                                                <h2 className="text-4xl font-press text-white mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">{packResult.toUpperCase()}</h2>
+                                                <p className="text-white/80 font-mono text-sm mb-8">Tap to continue</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
